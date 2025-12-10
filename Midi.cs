@@ -18,6 +18,7 @@ namespace piano
 
         private static WaveFileWriter? recorder;
         private static bool isRecording = false;
+        private static string _currentRecPath = "";
         public static object recordLock = new object();
 
         public static int BaseOctave { get; private set; } = 48;
@@ -28,57 +29,57 @@ namespace piano
         private static HashSet<Keys> pressedKeys = new();
         private static HashSet<int> sustainedNotes = new();
 
-private static readonly Dictionary<Keys, int> KeyMap = new()
-{
-    { Keys.Z, 0 },
-    { Keys.X, 2 },
-    { Keys.C, 4 },
-    { Keys.V, 5 },
-    { Keys.B, 7 },
-    { Keys.N, 9 },
-    { Keys.M, 11 },
-    { Keys.Oemcomma, 12 },
-    { Keys.OemPeriod, 14 },
-    { Keys.OemQuestion, 16 },
+        private static readonly Dictionary<Keys, int> KeyMap = new()
+        {
+            { Keys.Z, 0 },
+            { Keys.X, 2 },
+            { Keys.C, 4 },
+            { Keys.V, 5 },
+            { Keys.B, 7 },
+            { Keys.N, 9 },
+            { Keys.M, 11 },
+            { Keys.Oemcomma, 12 },
+            { Keys.OemPeriod, 14 },
+            { Keys.OemQuestion, 16 },
 
-    { Keys.S, 1 },
-    { Keys.D, 3 },
-    { Keys.G, 6 },
-    { Keys.H, 8 },
-    { Keys.J, 10 },
-    { Keys.L, 13 },
-    { Keys.Oem1, 15 },
+            { Keys.S, 1 },
+            { Keys.D, 3 },
+            { Keys.G, 6 },
+            { Keys.H, 8 },
+            { Keys.J, 10 },
+            { Keys.L, 13 },
+            { Keys.Oem1, 15 },
 
-    { Keys.Q, 17 },
-    { Keys.W, 19 },
-    { Keys.E, 21 },
-    { Keys.R, 23 },
-    { Keys.T, 24 },
-    { Keys.Y, 26 },
-    { Keys.U, 28 },
-    { Keys.I, 29 },
-    { Keys.O, 31 },
-    { Keys.P, 33 },
-    { Keys.OemOpenBrackets, 35 },
-    { Keys.Oem6, 36 },
-    { Keys.Return, 38 },
+            { Keys.Q, 17 },
+            { Keys.W, 19 },
+            { Keys.E, 21 },
+            { Keys.R, 23 },
+            { Keys.T, 24 },
+            { Keys.Y, 26 },
+            { Keys.U, 28 },
+            { Keys.I, 29 },
+            { Keys.O, 31 },
+            { Keys.P, 33 },
+            { Keys.OemOpenBrackets, 35 },
+            { Keys.Oem6, 36 },
+            { Keys.Return, 38 },
 
-    { Keys.D2, 18 },
-    { Keys.D3, 20 },
-    { Keys.D4, 22 },
-    { Keys.D6, 25 },
-    { Keys.D7, 27 },
-    { Keys.D9, 30 },
-    { Keys.D0, 32 },
-    { Keys.OemMinus, 34 },
-    { Keys.Oemplus, 37 },
+            { Keys.D2, 18 },
+            { Keys.D3, 20 },
+            { Keys.D4, 22 },
+            { Keys.D6, 25 },
+            { Keys.D7, 27 },
+            { Keys.D9, 30 },
+            { Keys.D0, 32 },
+            { Keys.OemMinus, 34 },
+            { Keys.Oemplus, 37 },
 
-    { Keys.Back, 49 },
-    { Keys.Delete, 52 },
-    { Keys.End, 53 },
-    { Keys.PageUp, 54 },
-    { Keys.PageDown, 55 }
-};
+            { Keys.Back, 49 },
+            { Keys.Delete, 52 },
+            { Keys.End, 53 },
+            { Keys.PageUp, 54 },
+            { Keys.PageDown, 55 }
+        };
 
         public static void Init(string soundFontPath)
         {
@@ -119,6 +120,7 @@ private static readonly Dictionary<Keys, int> KeyMap = new()
         {
             lock (recordLock)
             {
+                _currentRecPath = filename;
                 recorder = new WaveFileWriter(filename, WaveFormat.CreateIeeeFloatWaveFormat(44100, 2));
                 isRecording = true;
             }
@@ -132,6 +134,25 @@ private static readonly Dictionary<Keys, int> KeyMap = new()
                 recorder?.Dispose();
                 recorder = null;
             }
+        }
+
+        public static void AbortRecording()
+        {
+            lock (recordLock)
+            {
+                isRecording = false;
+                recorder?.Dispose();
+                recorder = null;
+            }
+
+            try
+            {
+                if (!string.IsNullOrEmpty(_currentRecPath) && File.Exists(_currentRecPath))
+                {
+                    File.Delete(_currentRecPath);
+                }
+            }
+            catch { }
         }
 
         public static bool IsRecording() => isRecording;

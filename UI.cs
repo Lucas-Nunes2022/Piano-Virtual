@@ -41,19 +41,20 @@ namespace piano
                     ("&Sair", () => Application.Exit())
                 }),
                 ("&Gravação", new (string, Action)[] {
-                    ("&Gravar Performance...", ToggleRecording)
+                    ("&Gravar Performance...", ToggleRecording),
+                    ("&Cancelar Gravação", CancelRecordingUI)
                 }),
-("&Ajuda", new (string, Action)[] {
-    ("Ver &Atalhos", ShowShortcuts),
-    ("-", () => {}),
-    ("&Visite meu site", () => {
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Constantes.site) { UseShellExecute = true }); } catch { }
-    }),
-    ("&código fonte", () => {
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Constantes.github) { UseShellExecute = true }); } catch { }
-    }),
-    ("&Sobre", () => Wf.msg($"Piano Virtual v{Constantes.versao}.\nDesenvolvido por Lucas Nunes Costa.", "Sobre"))
-})
+                ("&Ajuda", new (string, Action)[] {
+                    ("Ver &Atalhos", ShowShortcuts),
+                    ("-", () => {}),
+                    ("&Visite meu site", () => {
+                        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Constantes.site) { UseShellExecute = true }); } catch { }
+                    }),
+                    ("&código fonte", () => {
+                        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Constantes.github) { UseShellExecute = true }); } catch { }
+                    }),
+                    ("&Sobre", () => Wf.msg($"Piano Virtual v{Constantes.versao}.\nDesenvolvido por Lucas Nunes Costa.", "Sobre"))
+                })
             );
 
             Wf.vStack(() =>
@@ -98,6 +99,7 @@ namespace piano
             });
 
             UpdateDisplay();
+            SetMenuVisible("&Cancelar Gravação", false);
             
             if (_firstLoad) 
             {
@@ -119,6 +121,8 @@ namespace piano
             _tempRecPath = Config.GetRecordingPath();
             var form = Wf.Get<Form>("_Form");
             
+            if (form == null) return;
+
             Wf.wt("Configurações");
 
             form.Controls.Clear();
@@ -220,6 +224,7 @@ namespace piano
                 if (await StartRecordingUI())
                 {
                     UpdateMenuText("&Gravar Performance...", "Parar Gravação");
+                    SetMenuVisible("&Cancelar Gravação", true);
                 }
             }
         }
@@ -272,7 +277,22 @@ namespace piano
 
             MidiManager.StopRecording();
             UpdateStatus("");
+            SetMenuVisible("&Cancelar Gravação", false);
             Wf.msg("Gravação salva com sucesso!");
+        }
+
+        private static void CancelRecordingUI()
+        {
+            if (!MidiManager.IsRecording()) return;
+
+            MidiManager.AbortRecording();
+            UpdateStatus("");
+            
+            UpdateMenuText("Parar Gravação", "&Gravar Performance...");
+            SetMenuVisible("&Cancelar Gravação", false);
+            
+            Wf.msg("Gravação cancelada e arquivo descartado.");
+            Sp.Speak("Gravação cancelada");
         }
 
         private static void UpdateMenuText(string currentText, string newText)
@@ -316,6 +336,47 @@ namespace piano
             return false;
         }
 
+        private static void SetMenuVisible(string targetText, bool visible)
+        {
+            var form = Wf.Get<Form>("_Form");
+            if (form != null && form.MainMenuStrip != null)
+            {
+                foreach (ToolStripMenuItem topItem in form.MainMenuStrip.Items)
+                {
+                    if (TrySetVisible(topItem, targetText, visible)) break;
+                }
+            }
+        }
+
+        private static bool TrySetVisible(ToolStripDropDownItem item, string target, bool visible)
+        {
+            string cleanItemText = (item.Text ?? "").Replace("&", "");
+            string cleanTarget = target.Replace("&", "");
+
+            if (cleanItemText == cleanTarget)
+            {
+                item.Visible = visible;
+                return true;
+            }
+
+            if (item.DropDownItems != null)
+            {
+                foreach (ToolStripItem subItem in item.DropDownItems)
+                {
+                    if (subItem is ToolStripDropDownItem dropDownItem)
+                    {
+                        if (TrySetVisible(dropDownItem, target, visible)) return true;
+                    }
+                    else if ((subItem.Text ?? "").Replace("&", "") == cleanTarget)
+                    {
+                        subItem.Visible = visible;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         public static async void ShowStatusTemp(string msg)
         {
             if (MidiManager.IsRecording()) return;
@@ -329,6 +390,8 @@ namespace piano
             _isPianoScreen = false;
             var form = Wf.Get<Form>("_Form");
             
+            if (form == null) return;
+
             Wf.wt("Atalhos do Teclado");
 
             form.Controls.Clear();
