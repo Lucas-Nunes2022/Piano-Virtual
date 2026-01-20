@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing;
 using Wforms;
@@ -9,46 +11,70 @@ namespace piano
 {
     public static class Program
     {
+        private const string MutexName = "PianoVirtual_App_Mutex_Instance";
+
         [STAThread]
         static void Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            Config.Load();
-            
-            string appPath = AppDomain.CurrentDomain.BaseDirectory;
-            string[] sf2Files = Directory.GetFiles(appPath, "*.sf2");
-            
-            string selectedSoundFont = "";
-
-            if (sf2Files.Length == 0)
+            using (Mutex mutex = new Mutex(true, MutexName, out bool createdNew))
             {
-                MessageBox.Show("Nenhum arquivo de som (.sf2) foi encontrado na pasta do aplicativo.\n\nPor favor, adicione um arquivo SoundFont (.sf2) para tocar.", 
-                    "Erro: Falta Arquivo de Som", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-            else if (sf2Files.Length == 1)
-            {
-                selectedSoundFont = sf2Files[0];
-            }
-            else
-            {
-                selectedSoundFont = ShowSelectionDialog(sf2Files);
-                if (string.IsNullOrEmpty(selectedSoundFont)) return;
-            }
-            
-            MidiManager.Init(selectedSoundFont);
-            MidiManager.ConfigureInput(Config.MidiInputId);
+                if (!createdNew)
+                {
+                    MessageBox.Show("O Piano Virtual já está aberto!", "Aviso", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
-            Wf.InitApp($"Piano Virtual v{Constantes.versao}");
+                try 
+                {
+                    bool continuar = Updater.CheckAndUpdateBlocking().GetAwaiter().GetResult();
+                    if (!continuar)
+                    {
+                        return;
+                    }
+                }
+                catch 
+                {
+                }
 
-            Wf.Run(
-                "",
-                UI.BuildMain,
-                (600, 350),
-                UI.ConfigureWindow
-            );
+                Config.Load();
+                
+                string appPath = AppDomain.CurrentDomain.BaseDirectory;
+                string[] sf2Files = Directory.GetFiles(appPath, "*.sf2");
+                
+                string selectedSoundFont = "";
+
+                if (sf2Files.Length == 0)
+                {
+                    MessageBox.Show("Nenhum arquivo de som (.sf2) foi encontrado na pasta do aplicativo.\n\nPor favor, adicione um arquivo SoundFont (.sf2) para tocar.", 
+                        "Erro: Falta Arquivo de Som", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                else if (sf2Files.Length == 1)
+                {
+                    selectedSoundFont = sf2Files[0];
+                }
+                else
+                {
+                    selectedSoundFont = ShowSelectionDialog(sf2Files);
+                    if (string.IsNullOrEmpty(selectedSoundFont)) return;
+                }
+                
+                MidiManager.Init(selectedSoundFont);
+                MidiManager.ConfigureInput(Config.MidiInputId);
+
+                Wf.InitApp($"Piano Virtual v{Constantes.versao}");
+
+                Wf.Run(
+                    "",
+                    UI.BuildMain,
+                    (600, 350),
+                    UI.ConfigureWindow
+                );
+            }
         }
 
         private static string ShowSelectionDialog(string[] filePaths)

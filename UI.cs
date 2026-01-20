@@ -1,11 +1,12 @@
 using System;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NAudio.Midi;
 using Wforms;
-using Speech; 
+using Speech;
 
 namespace piano
 {
@@ -20,11 +21,11 @@ namespace piano
             _isPianoScreen = true;
 
             var form = Wf.Get<Form>("_Form");
-            
+
             if (form != null)
             {
                 form.Text = $"Piano Virtual v{Constantes.versao}";
-                
+
                 form.Controls.Clear();
                 if (form.MainMenuStrip != null)
                 {
@@ -37,7 +38,7 @@ namespace piano
                 ("&Menu", new (string, Action)[] {
                     ("&Configurar...", OpenSettingsWindow),
                     ("&Oitava padrão", () => { MidiManager.ResetOctave(); Wf.msg("Oitava definida para a padrão!"); }),
-                    ("-", () => {}), 
+                    ("-", () => { }),
                     ("&Sair", () => Application.Exit())
                 }),
                 ("&Gravação", new (string, Action)[] {
@@ -46,7 +47,7 @@ namespace piano
                 }),
                 ("&Ajuda", new (string, Action)[] {
                     ("Ver &Atalhos", ShowShortcuts),
-                    ("-", () => {}),
+                    ("-", () => { }),
                     ("&Visite meu site", () => {
                         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Constantes.site) { UseShellExecute = true }); } catch { }
                     }),
@@ -100,8 +101,8 @@ namespace piano
 
             UpdateDisplay();
             SetMenuVisible("&Cancelar Gravação", false);
-            
-            if (_firstLoad) 
+
+            if (_firstLoad)
             {
                 Sp.Speak($"Piano Virtual v{Constantes.versao} janela. Bem-vindo ao piano virtual. Utilize o menu ajuda para conhecer os atalhos de teclado.");
                 _firstLoad = false;
@@ -120,7 +121,7 @@ namespace piano
             _isPianoScreen = false;
             _tempRecPath = Config.GetRecordingPath();
             var form = Wf.Get<Form>("_Form");
-            
+
             if (form == null) return;
 
             Wf.wt("Configurações");
@@ -140,19 +141,20 @@ namespace piano
                 {
                     Wf.hStack(() => {
                         Wf.label("Selecione o dispositivo de entrada:");
-                        
+
                         Wf.combo(GetMidiInDevices(), "cb_in");
 
                         Wf.button("Atualizar lista de dispositivos", () => {
                             var cb = Wf.Get<ComboBox>("cb_in");
-                            if(cb != null) {
+                            if (cb != null)
+                            {
                                 cb.Items.Clear();
                                 cb.Items.AddRange(GetMidiInDevices());
-                                if(cb.Items.Count > 0) cb.SelectedIndex = 0;
+                                if (cb.Items.Count > 0) cb.SelectedIndex = 0;
                                 Sp.Speak("Lista atualizada");
                             }
                         }, b => {
-                            b.Width = 30; 
+                            b.Width = 30;
                             b.Height = 23;
                             b.Padding = new Padding(0);
                             b.TextAlign = ContentAlignment.MiddleCenter;
@@ -233,14 +235,14 @@ namespace piano
         {
             string savedPath = Config.RecordingPath;
 
-            if (!string.IsNullOrWhiteSpace(savedPath) && System.IO.Directory.Exists(savedPath))
+            if (!string.IsNullOrWhiteSpace(savedPath) && Directory.Exists(savedPath))
             {
                 string fileName = $"Piano_Rec_{DateTime.Now:yyyyMMdd_HHmmss}.wav";
-                string fullPath = System.IO.Path.Combine(savedPath, fileName);
+                string fullPath = Path.Combine(savedPath, fileName);
 
                 MidiManager.StartRecording(fullPath);
                 UpdateStatus("GRAVANDO...");
-                
+
                 await Task.Delay(500);
                 Sp.Speak("Gravando");
                 return true;
@@ -253,8 +255,8 @@ namespace piano
 
             if (sfd.ShowDialog() == DialogResult.OK)
             {
-                string? pasta = System.IO.Path.GetDirectoryName(sfd.FileName);
-                
+                string? pasta = Path.GetDirectoryName(sfd.FileName);
+
                 if (!string.IsNullOrEmpty(pasta))
                 {
                     Config.RecordingPath = pasta;
@@ -263,7 +265,7 @@ namespace piano
 
                 MidiManager.StartRecording(sfd.FileName);
                 UpdateStatus("GRAVANDO...");
-                
+
                 await Task.Delay(500);
                 Sp.Speak("Gravando");
                 return true;
@@ -287,10 +289,10 @@ namespace piano
 
             MidiManager.AbortRecording();
             UpdateStatus("");
-            
+
             UpdateMenuText("Parar Gravação", "&Gravar Performance...");
             SetMenuVisible("&Cancelar Gravação", false);
-            
+
             Wf.msg("Gravação cancelada e arquivo descartado.");
             Sp.Speak("Gravação cancelada");
         }
@@ -385,63 +387,44 @@ namespace piano
             if (!MidiManager.IsRecording()) UpdateStatus("");
         }
 
-        private static void ShowShortcuts()
-        {
-            _isPianoScreen = false;
-            var form = Wf.Get<Form>("_Form");
-            
-            if (form == null) return;
+private static void ShowShortcuts()
+{
+    _isPianoScreen = false;
 
-            Wf.wt("Atalhos do Teclado");
+    string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "help.html");
+    
+    if (!File.Exists(path))
+    {
+        File.WriteAllText(path, "<html><body><h1>Erro</h1><p>Arquivo help.html não encontrado.</p></body></html>");
+    }
 
-            form.Controls.Clear();
-            if (form.MainMenuStrip != null) form.MainMenuStrip = null;
+    var form = Wf.Get<Form>("_Form");
+    if (form == null) return;
 
-            ListBox? lbFocus = null;
+    Wf.wt("Ajuda - Comandos");
+    form.Controls.Clear();
+    if (form.MainMenuStrip != null) form.MainMenuStrip = null;
 
-            Wf.vStack(() => 
-            {
-                Wf.label("Lista de Comandos:", l => l.Font = new Font("Segoe UI", 12, FontStyle.Bold));
 
-                Wf.panel(() => {}, p => {
-                    p.AutoSize = false;
-                    p.Size = new Size(380, 420); 
-                    
-                    var lb = new ListBox();
-                    lb.Dock = DockStyle.Fill;
-                    lb.Font = new Font("Segoe UI", 11);
-                    lb.BorderStyle = BorderStyle.FixedSingle;
-                    
-                    lb.Items.AddRange(new object[] {
-                        "--- NOTAS ---",
-                        "Teclas de Z a M  : Oitava Central",
-                        "Teclas de Q a P: Oitava Aguda",
-                        "--- CONTROLES ---",
-                        "Espaço          : Pedal Sustain",
-                        "Setas Esquerda/Direita   : Instrumento Anterior/Próximo",
-                        "Setas Cima/Baixo: Alterar Oitava",
-                        "F1 / F2         : Transposição",
-                        "--- FAVORITOS ---",
-                        "Ctrl + números de 0 a 9      : Salvar instrumento como favorito",
-                        "Ctrl+Shift+ números de 0 a 9 : Carregar instrumento favorito"
-                    });
+    Wf.btn("Voltar", () => BuildMain(), b => {
+        b.Dock = DockStyle.Bottom;
+        b.Height = 40;
+        b.Cursor = Cursors.Hand;
+        b.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+    });
 
-                    lbFocus = lb;
-                    p.Controls.Add(lb);
-                });
+    var browser = new WebBrowser();
+    browser.Dock = DockStyle.Fill;
+    browser.IsWebBrowserContextMenuEnabled = false;
+    browser.WebBrowserShortcutsEnabled = false;
+    browser.AllowNavigation = false;
+    
+    browser.Navigate(path);
 
-                Wf.button("Voltar", () => BuildMain(), b => {
-                    b.Width = 120;
-                    b.Height = 35;
-                });
-
-            }, p => {
-                p.Padding = new Padding(40);
-                p.Dock = DockStyle.Fill;
-            });
-
-            if (lbFocus != null) lbFocus.Select();
-        }
+    form.Controls.Add(browser);
+    
+    browser.BringToFront();
+}
 
         private static void StyleInfoLabel(Label l)
         {
@@ -459,15 +442,15 @@ namespace piano
             {
                 var form = Wf.Get<Form>("_Form");
                 if (form == null || form.IsDisposed) return;
-                
+
                 if (!form.Controls.ContainsKey("lbl_instr")) return;
 
                 if (form.InvokeRequired) { form.Invoke((MethodInvoker)UpdateDisplay); return; }
 
-                string instrName = Instruments.GM.ContainsKey(MidiManager.CurrentInstrument) 
-                    ? Instruments.GM[MidiManager.CurrentInstrument] 
+                string instrName = Instruments.GM.ContainsKey(MidiManager.CurrentInstrument)
+                    ? Instruments.GM[MidiManager.CurrentInstrument]
                     : "Unknown";
-                
+
                 if (instrName.Length > 20) instrName = instrName.Substring(0, 18) + "..";
 
                 Wf.Set("lbl_instr", $"{MidiManager.CurrentInstrument:000}: {instrName}");
@@ -477,10 +460,13 @@ namespace piano
                 var lblPedal = Wf.Get<Label>("lbl_pedal");
                 if (lblPedal != null)
                 {
-                    if (MidiManager.IsSustainActive) {
+                    if (MidiManager.IsSustainActive)
+                    {
                         lblPedal.Text = "PEDAL SUSTAIN";
                         lblPedal.ForeColor = Color.DarkRed;
-                    } else {
+                    }
+                    else
+                    {
                         lblPedal.Text = "PEDAL LIVRE";
                         lblPedal.ForeColor = Color.LightGray;
                     }
@@ -499,19 +485,20 @@ namespace piano
         public static void ConfigureWindow(Form f)
         {
             f.KeyPreview = true;
-            
+
             f.KeyDown += (s, e) => {
                 if (_isPianoScreen) MidiManager.OnKeyDown(s, e);
             };
-            
+
             f.KeyUp += (s, e) => {
                 if (_isPianoScreen) MidiManager.OnKeyUp(s, e);
             };
         }
 
-        private static string[] GetMidiInDevices() => 
+        private static string[] GetMidiInDevices() =>
             Enumerable.Range(0, MidiIn.NumberOfDevices)
-            .Select(i => $"{i}: {MidiIn.DeviceInfo(i).ProductName}").ToArray();
+                .Select(i => $"{i}: {MidiIn.DeviceInfo(i).ProductName}")
+                .ToArray();
 
         private static void ApplySettings()
         {
