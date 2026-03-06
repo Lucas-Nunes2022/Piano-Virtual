@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Media;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -27,17 +28,19 @@ namespace piano
         public static int Transpose { get; private set; } = 0;
         public static int CurrentInstrument { get; private set; } = 0;
         public static bool IsSustainActive { get; private set; } = false;
+        private static bool isSustainLocked = false;
 
         private static int ReverbLevel = 0;
+        private static int ChorusLevel = 0;
+        private static int ModulationLevel = 0;
 
         private static System.Timers.Timer? metronomeTimer;
         private static bool isMetronomeOn = false;
         private static int bpm = 120;
         private static int currentBeat = 0;
 
-        private static float[]? metronomeHighBuffer;
-        private static float[]? metronomeLowBuffer;
-        private static WaveFormat? metronomeFormat;
+        private static SoundPlayer? metronomeHighPlayer;
+        private static SoundPlayer? metronomeLowPlayer;
 
         private static HashSet<Keys> pressedKeys = new();
         private static HashSet<int> sustainedNotes = new();
@@ -94,26 +97,10 @@ namespace piano
         {
             try
             {
-                if (File.Exists("1.wav")) metronomeHighBuffer = LoadWavToMemory("1.wav");
-                if (File.Exists("2.wav")) metronomeLowBuffer = LoadWavToMemory("2.wav");
+                if (File.Exists("1.wav")) { metronomeHighPlayer = new SoundPlayer("1.wav"); metronomeHighPlayer.LoadAsync(); }
+                if (File.Exists("2.wav")) { metronomeLowPlayer = new SoundPlayer("2.wav"); metronomeLowPlayer.LoadAsync(); }
             }
-            catch { /* Ignora erros de carregamento, usará fallback MIDI */ }
-        }
-
-        private static float[] LoadWavToMemory(string path)
-        {
-            using (var reader = new AudioFileReader(path))
-            {
-                metronomeFormat = reader.WaveFormat;
-                var samples = new List<float>();
-                var buffer = new float[reader.WaveFormat.SampleRate * reader.WaveFormat.Channels];
-                int read;
-                while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    samples.AddRange(buffer.Take(read));
-                }
-                return samples.ToArray();
-            }
+            catch { }
         }
 
         private static void SetupMetronomeTimer()
@@ -128,11 +115,13 @@ namespace piano
 
         private static void PlayMetronomeTick()
         {
-            float[]? soundToPlay = (currentBeat == 0) ? metronomeHighBuffer : metronomeLowBuffer;
-
-            if (soundToPlay != null)
+            if (currentBeat == 0 && metronomeHighPlayer != null)
             {
-                PlayBufferFireAndForget(soundToPlay);
+                Task.Run(() => metronomeHighPlayer.Play());
+            }
+            else if (currentBeat != 0 && metronomeLowPlayer != null)
+            {
+                Task.Run(() => metronomeLowPlayer.Play());
             }
             else
             {
@@ -146,32 +135,6 @@ namespace piano
 
             currentBeat++;
             if (currentBeat >= 4) currentBeat = 0;
-        }
-
-        private static void PlayBufferFireAndForget(float[] buffer)
-        {
-            Task.Run(() =>
-            {
-                try
-                {
-                    var provider = new BufferedWaveProvider(metronomeFormat ?? new WaveFormat(44100, 2));
-                    provider.BufferDuration = TimeSpan.FromSeconds(2);
-                    provider.DiscardOnBufferOverflow = true;
-
-                    byte[] bytes = new byte[buffer.Length * 4];
-                    Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);
-                    provider.AddSamples(bytes, 0, bytes.Length);
-
-                    using (var tempOut = new WaveOutEvent())
-                    {
-                        tempOut.Init(provider);
-                        tempOut.Play();
-                        int ms = (int)((buffer.Length / (float)(metronomeFormat?.Channels ?? 2) / (metronomeFormat?.SampleRate ?? 44100)) * 1000);
-                        Thread.Sleep(ms + 100); 
-                    }
-                }
-                catch { }
-            });
         }
 
         public static void ToggleMetronome()
@@ -214,9 +177,11 @@ namespace piano
                 Label textLabel = new Label() { Left = 20, Top = 20, Text = "Digite o BPM (ex: 120):", AutoSize = true };
                 TextBox inputBox = new TextBox() { Left = 20, Top = 50, Width = 240, Text = bpm.ToString() };
                 Button confirmation = new Button() { Text = "Iniciar", Left = 160, Width = 100, Top = 80, DialogResult = DialogResult.OK };
+                Button cancel = new Button() { Text = "Cancelar", Left = 50, Width = 100, Top = 80, DialogResult = DialogResult.Cancel };
 
-                prompt.Controls.Add(textLabel); prompt.Controls.Add(inputBox); prompt.Controls.Add(confirmation);
+                prompt.Controls.Add(textLabel); prompt.Controls.Add(inputBox); prompt.Controls.Add(confirmation); prompt.Controls.Add(cancel);
                 prompt.AcceptButton = confirmation;
+                prompt.CancelButton = cancel;
                 prompt.Shown += (s, e) => { inputBox.Focus(); inputBox.SelectAll(); };
 
                 if (prompt.ShowDialog() == DialogResult.OK)
@@ -235,6 +200,26 @@ namespace piano
             int percent = (int)Math.Round((ReverbLevel / 127.0) * 100);
             UI.ShowStatusTemp($"Reverb: {percent}%");
             Sp.Speak($"Reverb {percent}");
+        }
+
+        public static void AdjustChorus(int amount)
+        {
+            if (synthesizer == null) return;
+            ChorusLevel = Math.Clamp(ChorusLevel + amount, 0, 127);
+            synthesizer.ProcessMidiMessage(0, 0xB0, 93, ChorusLevel);
+            int percent = (int)Math.Round((ChorusLevel / 127.0) * 100);
+            UI.ShowStatusTemp($"Chorus: {percent}%");
+            Sp.Speak($"Chorus {percent}");
+        }
+
+        public static void AdjustModulation(int amount)
+        {
+            if (synthesizer == null) return;
+            ModulationLevel = Math.Clamp(ModulationLevel + amount, 0, 127);
+            synthesizer.ProcessMidiMessage(0, 0xB0, 1, ModulationLevel);
+            int percent = (int)Math.Round((ModulationLevel / 127.0) * 100);
+            UI.ShowStatusTemp($"Modulação: {percent}%");
+            Sp.Speak($"Modulação {percent}");
         }
 
         public static void StartRecording(string filename)
@@ -298,7 +283,24 @@ namespace piano
                 }
             }
 
-            if (e.KeyCode == Keys.Space && !IsSustainActive) { ToggleSustain(true); return; }
+            if (e.KeyCode == Keys.Space)
+            {
+                if (e.Shift)
+                {
+                    isSustainLocked = !isSustainLocked;
+                    ToggleSustain(isSustainLocked);
+                    
+                    string msg = isSustainLocked ? "Pedal fixo ligado" : "Pedal fixo desligado";
+                    UI.ShowStatusTemp(msg);
+                    Sp.Speak(msg);
+                }
+                else if (!isSustainLocked && !IsSustainActive)
+                {
+                    ToggleSustain(true);
+                }
+                return;
+            }
+            
             if (e.KeyCode == Keys.Right) { ChangeInstrument(1); return; }
             if (e.KeyCode == Keys.Left) { ChangeInstrument(-1); return; }
             if (e.KeyCode == Keys.Up) { ChangeOctave(12); return; }
@@ -308,6 +310,10 @@ namespace piano
             if (e.KeyCode == Keys.F3) { AdjustReverb(-10); return; }
             if (e.KeyCode == Keys.F4) { AdjustReverb(10); return; }
             if (e.KeyCode == Keys.F5) { ToggleMetronome(); return; }
+            if (e.KeyCode == Keys.F6) { AdjustChorus(-10); return; }
+            if (e.KeyCode == Keys.F7) { AdjustChorus(10); return; }
+            if (e.KeyCode == Keys.F8) { AdjustModulation(-10); return; }
+            if (e.KeyCode == Keys.F9) { AdjustModulation(10); return; }
 
             if (!KeyMap.ContainsKey(e.KeyCode) || pressedKeys.Contains(e.KeyCode)) return;
 
@@ -317,7 +323,15 @@ namespace piano
 
         public static void OnKeyUp(object? sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Space) { ToggleSustain(false); return; }
+            if (e.KeyCode == Keys.Space)
+            {
+                if (!isSustainLocked)
+                {
+                    ToggleSustain(false);
+                }
+                return;
+            }
+            
             if (pressedKeys.Contains(e.KeyCode))
             {
                 pressedKeys.Remove(e.KeyCode);
@@ -360,6 +374,12 @@ namespace piano
             if (!Instruments.IsValid(id) && Instruments.GM.Count > 0) id = Instruments.GetFirstAvailableId();
             CurrentInstrument = id;
             synthesizer?.ProcessMidiMessage(0, 0xC0, CurrentInstrument, 0);
+
+            // Força a aplicação dos níveis atuais para sobrescrever qualquer padrão da SoundFont
+            synthesizer?.ProcessMidiMessage(0, 0xB0, 91, ReverbLevel);
+            synthesizer?.ProcessMidiMessage(0, 0xB0, 93, ChorusLevel);
+            synthesizer?.ProcessMidiMessage(0, 0xB0, 1, ModulationLevel);
+
             UI.UpdateDisplay();
             if (!silent) Sp.Speak($"{CurrentInstrument}, {GetInstrName(CurrentInstrument)}");
         }
