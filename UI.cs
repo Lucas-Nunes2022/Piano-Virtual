@@ -16,6 +16,16 @@ namespace piano
         private static bool _firstLoad = true;
         private static bool _isPianoScreen = true;
 
+        private static void ClearFormControls(Form form)
+        {
+            while (form.Controls.Count > 0)
+            {
+                Control c = form.Controls[0];
+                form.Controls.RemoveAt(0);
+                c.Dispose();
+            }
+        }
+
         public static void BuildMain()
         {
             _isPianoScreen = true;
@@ -26,7 +36,8 @@ namespace piano
             {
                 form.Text = $"Piano Virtual v{Constantes.versao}";
 
-                form.Controls.Clear();
+                ClearFormControls(form);
+                
                 if (form.MainMenuStrip != null)
                 {
                     form.MainMenuStrip.Dispose();
@@ -91,7 +102,7 @@ namespace piano
                     l.Padding = new Padding(0, 5, 0, 10);
                 });
 
-                Wf.label("Espaço: Pedal  |  F1/F2: Transpose  |  Ctrl + (Shift) + Nº: Favoritos", l => {
+                Wf.label("Espaço: Pedal  |  F1/F2: Transpose  |  F10: Camada", l => {
                     l.ForeColor = Color.DimGray;
                     l.TextAlign = ContentAlignment.MiddleCenter;
                     l.Dock = DockStyle.Bottom;
@@ -126,7 +137,7 @@ namespace piano
 
             Wf.wt("Configurações");
 
-            form.Controls.Clear();
+            ClearFormControls(form);
             if (form.MainMenuStrip != null) form.MainMenuStrip = null;
 
             Wf.vStack(() =>
@@ -387,44 +398,44 @@ namespace piano
             if (!MidiManager.IsRecording()) UpdateStatus("");
         }
 
-private static void ShowShortcuts()
-{
-    _isPianoScreen = false;
+        private static void ShowShortcuts()
+        {
+            _isPianoScreen = false;
 
-    string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "help.html");
-    
-    if (!File.Exists(path))
-    {
-        File.WriteAllText(path, "<html><body><h1>Erro</h1><p>Arquivo help.html não encontrado.</p></body></html>");
-    }
+            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "help.html");
+            
+            if (!File.Exists(path))
+            {
+                File.WriteAllText(path, "<html><body><h1>Erro</h1><p>Arquivo help.html não encontrado.</p></body></html>");
+            }
 
-    var form = Wf.Get<Form>("_Form");
-    if (form == null) return;
+            var form = Wf.Get<Form>("_Form");
+            if (form == null) return;
 
-    Wf.wt("Ajuda - Comandos");
-    form.Controls.Clear();
-    if (form.MainMenuStrip != null) form.MainMenuStrip = null;
+            Wf.wt("Ajuda - Comandos");
+            ClearFormControls(form);
+            if (form.MainMenuStrip != null) form.MainMenuStrip = null;
 
 
-    Wf.btn("Voltar", () => BuildMain(), b => {
-        b.Dock = DockStyle.Bottom;
-        b.Height = 40;
-        b.Cursor = Cursors.Hand;
-        b.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-    });
+            Wf.btn("Voltar", () => BuildMain(), b => {
+                b.Dock = DockStyle.Bottom;
+                b.Height = 40;
+                b.Cursor = Cursors.Hand;
+                b.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            });
 
-    var browser = new WebBrowser();
-    browser.Dock = DockStyle.Fill;
-    browser.IsWebBrowserContextMenuEnabled = false;
-    browser.WebBrowserShortcutsEnabled = false;
-    browser.AllowNavigation = false;
-    
-    browser.Navigate(path);
+            var browser = new WebBrowser();
+            browser.Dock = DockStyle.Fill;
+            browser.IsWebBrowserContextMenuEnabled = false;
+            browser.WebBrowserShortcutsEnabled = false;
+            browser.AllowNavigation = false;
+            
+            browser.Navigate(path);
 
-    form.Controls.Add(browser);
-    
-    browser.BringToFront();
-}
+            form.Controls.Add(browser);
+            
+            browser.BringToFront();
+        }
 
         private static void StyleInfoLabel(Label l)
         {
@@ -453,17 +464,40 @@ private static void ShowShortcuts()
 
                 if (instrName.Length > 20) instrName = instrName.Substring(0, 18) + "..";
 
-                Wf.Set("lbl_instr", $"{MidiManager.CurrentInstrument:000}: {instrName}");
+                if (MidiManager.IsLayerActive)
+                {
+                    string layerName = Instruments.GM.ContainsKey(MidiManager.LayerInstrument)
+                        ? Instruments.GM[MidiManager.LayerInstrument]
+                        : "Unknown";
+                    
+                    if (layerName.Length > 15) layerName = layerName.Substring(0, 13) + "..";
+                    Wf.Set("lbl_instr", $"{MidiManager.CurrentInstrument:000} + {MidiManager.LayerInstrument:000}");
+                }
+                else
+                {
+                    Wf.Set("lbl_instr", $"{MidiManager.CurrentInstrument:000}: {instrName}");
+                }
+
                 Wf.Set("lbl_octave", $"Oitava: {(MidiManager.BaseOctave / 12) - 1}");
                 Wf.Set("lbl_transpose", $"Transp: {MidiManager.Transpose:+#;-#;0}");
 
                 var lblPedal = Wf.Get<Label>("lbl_pedal");
                 if (lblPedal != null)
                 {
-                    if (MidiManager.IsSustainActive)
+                    if (MidiManager.IsSustainHold && MidiManager.IsSustainLocked)
                     {
-                        lblPedal.Text = "PEDAL SUSTAIN";
+                        lblPedal.Text = "PEDAL SUSTAIN + FIXO";
                         lblPedal.ForeColor = Color.DarkRed;
+                    }
+                    else if (MidiManager.IsSustainHold)
+                    {
+                        lblPedal.Text = "PEDAL SUSTAIN (AMBOS)";
+                        lblPedal.ForeColor = Color.DarkRed;
+                    }
+                    else if (MidiManager.IsSustainLocked)
+                    {
+                        lblPedal.Text = "PEDAL FIXO (PRINCIPAL)";
+                        lblPedal.ForeColor = Color.DarkGoldenrod;
                     }
                     else
                     {
@@ -484,7 +518,13 @@ private static void ShowShortcuts()
 
         public static void ConfigureWindow(Form f)
         {
+            f.WindowState = FormWindowState.Maximized;
             f.KeyPreview = true;
+
+            f.Shown += (s, e) => {
+                f.Activate();
+                f.Focus();
+            };
 
             f.KeyDown += (s, e) => {
                 if (_isPianoScreen) MidiManager.OnKeyDown(s, e);

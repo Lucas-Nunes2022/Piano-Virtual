@@ -27,8 +27,11 @@ namespace piano
         public static int BaseOctave { get; private set; } = 48;
         public static int Transpose { get; private set; } = 0;
         public static int CurrentInstrument { get; private set; } = 0;
-        public static bool IsSustainActive { get; private set; } = false;
-        private static bool isSustainLocked = false;
+        public static bool IsLayerActive { get; private set; } = false;
+        public static int LayerInstrument { get; private set; } = 48;
+        
+        public static bool IsSustainHold { get; private set; } = false;
+        public static bool IsSustainLocked { get; private set; } = false;
 
         private static int ReverbLevel = 0;
         private static int ChorusLevel = 0;
@@ -287,22 +290,35 @@ namespace piano
             {
                 if (e.Shift)
                 {
-                    isSustainLocked = !isSustainLocked;
-                    ToggleSustain(isSustainLocked);
+                    IsSustainLocked = !IsSustainLocked;
+                    UpdateSustainState();
                     
-                    string msg = isSustainLocked ? "Pedal fixo ligado" : "Pedal fixo desligado";
+                    string msg = IsSustainLocked ? "Pedal fixo ligado" : "Pedal fixo desligado";
                     UI.ShowStatusTemp(msg);
                     Sp.Speak(msg);
                 }
-                else if (!isSustainLocked && !IsSustainActive)
+                else if (!IsSustainHold)
                 {
-                    ToggleSustain(true);
+                    IsSustainHold = true;
+                    UpdateSustainState();
                 }
                 return;
             }
             
-            if (e.KeyCode == Keys.Right) { ChangeInstrument(1); return; }
-            if (e.KeyCode == Keys.Left) { ChangeInstrument(-1); return; }
+            if (e.KeyCode == Keys.F10) 
+            { 
+                ToggleLayer(); 
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                return; 
+            }
+
+            if (e.Shift && e.KeyCode == Keys.Right) { ChangeLayerInstrument(1); return; }
+            if (e.Shift && e.KeyCode == Keys.Left) { ChangeLayerInstrument(-1); return; }
+
+            if (!e.Shift && e.KeyCode == Keys.Right) { ChangeInstrument(1); return; }
+            if (!e.Shift && e.KeyCode == Keys.Left) { ChangeInstrument(-1); return; }
+            
             if (e.KeyCode == Keys.Up) { ChangeOctave(12); return; }
             if (e.KeyCode == Keys.Down) { ChangeOctave(-12); return; }
             if (e.KeyCode == Keys.F1) { ChangeTranspose(-1); return; }
@@ -325,9 +341,10 @@ namespace piano
         {
             if (e.KeyCode == Keys.Space)
             {
-                if (!isSustainLocked)
+                if (IsSustainHold)
                 {
-                    ToggleSustain(false);
+                    IsSustainHold = false;
+                    UpdateSustainState();
                 }
                 return;
             }
@@ -337,6 +354,34 @@ namespace piano
                 pressedKeys.Remove(e.KeyCode);
                 if (KeyMap.ContainsKey(e.KeyCode)) StopNote(GetNoteValue(e.KeyCode));
             }
+        }
+
+        public static void ToggleLayer()
+        {
+            IsLayerActive = !IsLayerActive;
+            if (IsLayerActive)
+            {
+                synthesizer?.ProcessMidiMessage(1, 0xC0, LayerInstrument, 0);
+            }
+            UI.UpdateDisplay();
+            Sp.Speak(IsLayerActive ? "Camada ligada" : "Camada desligada");
+        }
+
+        public static void ChangeLayerInstrument(int delta)
+        {
+            if (!IsLayerActive) return;
+            
+            var ids = Instruments.GM.Keys.OrderBy(k => k).ToList();
+            if (ids.Count == 0) return;
+            
+            int idx = ids.IndexOf(LayerInstrument);
+            int next = (idx == -1) ? 0 : (idx + delta + ids.Count) % ids.Count;
+            
+            LayerInstrument = ids[next];
+            synthesizer?.ProcessMidiMessage(1, 0xC0, LayerInstrument, 0);
+            
+            UI.UpdateDisplay();
+            Sp.Speak($"Camada {LayerInstrument}, {GetInstrName(LayerInstrument)}");
         }
 
         private static void HandleFavorites(int slot, bool isShift, KeyEventArgs e)
@@ -375,7 +420,6 @@ namespace piano
             CurrentInstrument = id;
             synthesizer?.ProcessMidiMessage(0, 0xC0, CurrentInstrument, 0);
 
-            // Força a aplicação dos níveis atuais para sobrescrever qualquer padrão da SoundFont
             synthesizer?.ProcessMidiMessage(0, 0xB0, 91, ReverbLevel);
             synthesizer?.ProcessMidiMessage(0, 0xB0, 93, ChorusLevel);
             synthesizer?.ProcessMidiMessage(0, 0xB0, 1, ModulationLevel);
@@ -387,22 +431,53 @@ namespace piano
         private static void ChangeOctave(int val) { BaseOctave = Math.Clamp(BaseOctave + val, 0, 108); UI.UpdateDisplay(); Sp.Speak($"Oitava {(BaseOctave / 12) - 1}"); }
         private static void ChangeTranspose(int val) { Transpose = Math.Clamp(Transpose + val, -12, 12); UI.UpdateDisplay(); Sp.Speak($"Transp {Transpose}"); }
 
-        private static void ToggleSustain(bool active)
+        private static void UpdateSustainState()
         {
-            IsSustainActive = active; UI.UpdateDisplay();
-            if (!active) { foreach (var n in sustainedNotes) synthesizer?.NoteOff(0, Math.Clamp(n, 0, 127)); sustainedNotes.Clear(); }
+            bool anySustain = IsSustainHold || IsSustainLocked;
+            UI.UpdateDisplay();
+
+            if (!anySustain)
+            {
+                foreach (var n in sustainedNotes)
+                {
+                    synthesizer?.NoteOff(0, Math.Clamp(n, 0, 127));
+                    synthesizer?.NoteOff(1, Math.Clamp(n, 0, 127));
+                }
+                sustainedNotes.Clear();
+            }
+            else if (IsSustainLocked && !IsSustainHold)
+            {
+                foreach (var n in sustainedNotes)
+                {
+                    synthesizer?.NoteOff(1, Math.Clamp(n, 0, 127));
+                }
+            }
         }
 
         private static void PlayNote(int note)
         {
             if (sustainedNotes.Contains(note)) sustainedNotes.Remove(note);
+            
             synthesizer?.NoteOn(0, Math.Clamp(note, 0, 127), 100);
+            
+            if (IsLayerActive)
+            {
+                synthesizer?.NoteOn(1, Math.Clamp(note, 0, 127), 80);
+            }
         }
 
         private static void StopNote(int note)
         {
-            if (IsSustainActive) sustainedNotes.Add(note);
-            else synthesizer?.NoteOff(0, Math.Clamp(note, 0, 127));
+            bool sustainCh0 = IsSustainHold || IsSustainLocked;
+            bool sustainCh1 = IsSustainHold;
+
+            if (!sustainCh1) synthesizer?.NoteOff(1, Math.Clamp(note, 0, 127));
+            if (!sustainCh0) synthesizer?.NoteOff(0, Math.Clamp(note, 0, 127));
+
+            if (sustainCh0 || sustainCh1)
+            {
+                sustainedNotes.Add(note);
+            }
         }
 
         private class MidiSampleProvider : ISampleProvider
