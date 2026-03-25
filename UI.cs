@@ -12,6 +12,54 @@ namespace piano
 {
     public static class UI
     {
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr ProcessId);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool BringWindowToTop(IntPtr hWnd);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern void SwitchToThisWindow(IntPtr hWnd, bool fAltTab);
+
+        private static void ForceForeground(Form form)
+        {
+            try
+            {
+                IntPtr handle = form.Handle;
+                uint foreThread = GetWindowThreadProcessId(GetForegroundWindow(), IntPtr.Zero);
+                uint appThread = GetCurrentThreadId();
+
+                if (foreThread != appThread && foreThread != 0)
+                {
+                    AttachThreadInput(foreThread, appThread, true);
+                    BringWindowToTop(handle);
+                    SetForegroundWindow(handle);
+                    AttachThreadInput(foreThread, appThread, false);
+                }
+                else
+                {
+                    BringWindowToTop(handle);
+                    SetForegroundWindow(handle);
+                }
+                
+                form.Activate();
+                form.Focus();
+            }
+            catch { }
+        }
+
         private static string _tempRecPath = "";
         private static bool _firstLoad = true;
         private static bool _isPianoScreen = true;
@@ -92,8 +140,9 @@ namespace piano
                         Wf.label("Instrumento: 000", "lbl_instr", l => StyleInfoLabel(l));
                         Wf.label("Oitava: 4", "lbl_octave", l => StyleInfoLabel(l));
                         Wf.label("Transp: 0", "lbl_transpose", l => StyleInfoLabel(l));
+                        Wf.label("Força: 100", "lbl_velocity", l => StyleInfoLabel(l));
                     });
-                }, p => { p.Padding = new Padding(20, 0, 20, 10); p.Height = 45; });
+                }, p => { p.Padding = new Padding(10, 0, 10, 10); p.Height = 45; });
 
                 Wf.label("PEDAL LIVRE", "lbl_pedal", l => {
                     l.Font = new Font("Segoe UI", 12, FontStyle.Bold);
@@ -112,12 +161,6 @@ namespace piano
 
             UpdateDisplay();
             SetMenuVisible("&Cancelar Gravação", false);
-
-            if (_firstLoad)
-            {
-                Sp.Speak($"Piano Virtual v{Constantes.versao} janela. Bem-vindo ao piano virtual. Utilize o menu ajuda para conhecer os atalhos de teclado.");
-                _firstLoad = false;
-            }
 
             if (form != null)
             {
@@ -480,23 +523,24 @@ namespace piano
 
                 Wf.Set("lbl_octave", $"Oitava: {(MidiManager.BaseOctave / 12) - 1}");
                 Wf.Set("lbl_transpose", $"Transp: {MidiManager.Transpose:+#;-#;0}");
+                Wf.Set("lbl_velocity", $"Força: {MidiManager.NoteVelocity}");
 
                 var lblPedal = Wf.Get<Label>("lbl_pedal");
                 if (lblPedal != null)
                 {
                     if (MidiManager.IsSustainHold && MidiManager.IsSustainLocked)
                     {
-                        lblPedal.Text = "PEDAL SUSTAIN + FIXO";
+                        lblPedal.Text = $"PEDAL SUSTAIN E FIXO ({(MidiManager.SustainLockMode == 1 ? "CONT." : "INTEL.")})";
                         lblPedal.ForeColor = Color.DarkRed;
                     }
                     else if (MidiManager.IsSustainHold)
                     {
-                        lblPedal.Text = "PEDAL SUSTAIN (AMBOS)";
+                        lblPedal.Text = "PEDAL SUSTAIN";
                         lblPedal.ForeColor = Color.DarkRed;
                     }
                     else if (MidiManager.IsSustainLocked)
                     {
-                        lblPedal.Text = "PEDAL FIXO (PRINCIPAL)";
+                        lblPedal.Text = $"PEDAL FIXO ({(MidiManager.SustainLockMode == 1 ? "CONTÍNUO" : "INTELIGENTE")})";
                         lblPedal.ForeColor = Color.DarkGoldenrod;
                     }
                     else
@@ -521,9 +565,24 @@ namespace piano
             f.WindowState = FormWindowState.Maximized;
             f.KeyPreview = true;
 
-            f.Shown += (s, e) => {
+            f.Shown += async (s, e) => {
+                f.TopMost = true;
+                ForceForeground(f);
+                SwitchToThisWindow(f.Handle, true);
+                await Task.Delay(100);
+                f.TopMost = false;
                 f.Activate();
                 f.Focus();
+
+                try { SendKeys.SendWait("%"); SendKeys.SendWait("{ESC}"); } catch { }
+
+                await Task.Delay(100); // Dar tempo para o Windows processar a tecla antes de falar
+
+                if (_firstLoad)
+                {
+                    Sp.Speak($"Piano Virtual v{Constantes.versao} janela. Bem-vindo ao piano virtual. Utilize o menu ajuda para conhecer os atalhos de teclado.");
+                    _firstLoad = false;
+                }
             };
 
             f.KeyDown += (s, e) => {
