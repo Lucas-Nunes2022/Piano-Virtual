@@ -30,10 +30,10 @@ jobs:
           }
           "VERSION=$version" >> $env:GITHUB_ENV
 
-      # Self-contained: users do not need to install the .NET runtime, which matters because
-      # the updater replaces the files of people who only had an older runtime.
+      # Self-contained single file (see piano.csproj): users do not need to install the .NET
+      # runtime, and the zip holds piano.exe plus the sound font, the help and the NVDA library.
       - name: Publish
-        run: dotnet publish piano.csproj -c Release -r win-x64 --self-contained true -o publish
+        run: dotnet publish piano.csproj -c Release -r win-x64 --self-contained true -p:DebugType=none -o publish
 
       - name: Zip
         shell: pwsh

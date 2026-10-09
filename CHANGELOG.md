@@ -3,6 +3,18 @@
 Each version is described in English and then in Portuguese. The section of a version becomes
 the text of its GitHub release.
 
+## 1.5.1
+
+### English
+
+- The download is now a single `piano.exe` (plus the sound font and the help files) instead of
+  hundreds of files, and it is smaller.
+
+### Português
+
+- O download agora é um único `piano.exe` (mais o arquivo de sons e os arquivos de ajuda), em
+  vez de centenas de arquivos, e ficou menor.
+
 ## 1.5
 
 ### English
