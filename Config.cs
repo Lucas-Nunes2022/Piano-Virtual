@@ -5,11 +5,15 @@ namespace piano
 {
     public static class Config
     {
-        private static string ConfigPath => Path.Combine(Directory.GetCurrentDirectory(), "config.ini");
+        private static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.ini");
 
         public static int MidiInputId { get; set; } = 0;
         public static string RecordingPath { get; set; } = "";
         public static int[] Favorites { get; set; } = new int[10];
+        public static string Language { get; set; } = "auto";
+        public static string Style { get; set; } = "";
+        public static int Tempo { get; set; } = 0;
+        public static int SplitPoint { get; set; } = 60;
 
         public static void Load()
         {
@@ -22,7 +26,7 @@ namespace piano
                 var lines = File.ReadAllLines(ConfigPath);
                 foreach (var line in lines)
                 {
-                    var parts = line.Split('=');
+                    var parts = line.Split('=', 2);
                     if (parts.Length != 2) continue;
 
                     var key = parts[0].Trim();
@@ -35,6 +39,22 @@ namespace piano
                     else if (key == "RecPath")
                     {
                         RecordingPath = value;
+                    }
+                    else if (key == "Language")
+                    {
+                        Language = value;
+                    }
+                    else if (key == "Style")
+                    {
+                        Style = value;
+                    }
+                    else if (key == "Tempo")
+                    {
+                        if (int.TryParse(value, out int tempo)) Tempo = tempo;
+                    }
+                    else if (key == "SplitPoint")
+                    {
+                        if (int.TryParse(value, out int split)) SplitPoint = split;
                     }
                     else if (key.StartsWith("Fav"))
                     {
@@ -56,7 +76,11 @@ namespace piano
                 using var writer = new StreamWriter(ConfigPath);
                 writer.WriteLine($"MidiInput={MidiInputId}");
                 writer.WriteLine($"RecPath={RecordingPath}");
-                
+                writer.WriteLine($"Language={Language}");
+                writer.WriteLine($"Style={Style}");
+                writer.WriteLine($"Tempo={Tempo}");
+                writer.WriteLine($"SplitPoint={SplitPoint}");
+
                 for (int i = 0; i < 10; i++)
                 {
                     writer.WriteLine($"Fav{i}={Favorites[i]}");

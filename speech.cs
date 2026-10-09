@@ -27,6 +27,10 @@ namespace Speech
 
         [DllImport("nvdaControllerClient.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "nvdaController_cancelSpeech")]
         public static extern void NvdaControllerCancelSpeech();
+
+        // Returns 0 when NVDA is running
+        [DllImport("nvdaControllerClient.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "nvdaController_testIfRunning")]
+        public static extern int NvdaControllerTestIfRunning();
     }
 
     public class SpeechEngine : IDisposable
@@ -130,17 +134,9 @@ namespace Speech
             catch { nvdaDetected = false; return false; }
         }
 
-        private bool IsNvdaRunning()
-        {
-            try { return Process.GetProcessesByName("nvda").Any(); }
-            catch { return false; }
-        }
-
         private void UpdateNvdaStatus()
         {
-            if (!IsNvdaRunning()) { nvdaDetected = false; return; }
-            if (nvdaDetected) return;
-            try { NvdaNative.NvdaControllerSpeakText(" "); nvdaDetected = true; }
+            try { nvdaDetected = NvdaNative.NvdaControllerTestIfRunning() == 0; }
             catch { nvdaDetected = false; }
         }
 

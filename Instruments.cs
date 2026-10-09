@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using MeltySynth;
 
 namespace piano
@@ -9,6 +8,9 @@ namespace piano
     public static class Instruments
     {
         public static Dictionary<int, string> GM { get; private set; } = new();
+
+        // Program numbers available in the loaded SoundFont, in ascending order
+        public static int[] Ids { get; private set; } = Array.Empty<int>();
 
         private static readonly Dictionary<int, string> StandardNames = new Dictionary<int, string>
         {
@@ -49,72 +51,43 @@ namespace piano
         public static void LoadDefault()
         {
             GM = new Dictionary<int, string>(StandardNames);
+            Ids = GM.Keys.OrderBy(k => k).ToArray();
         }
 
         public static void LoadFromSoundFont(SoundFont font)
         {
             GM.Clear();
 
-            if (font.Presets.Count > 0)
+            foreach (var preset in font.Presets)
             {
-                var firstPreset = font.Presets[0];
-                Type type = firstPreset.GetType();
-                
-                var bankProp = type.GetProperty("Bank") ?? 
-                               type.GetProperty("BankNumber") ?? 
-                               type.GetProperty("BankId") ?? 
-                               type.GetProperty("wBank");
+                int program = preset.PatchNumber;
+                if (preset.BankNumber != 0 || program < 0 || program > 127 || GM.ContainsKey(program)) continue;
 
-                var progProp = type.GetProperty("Program") ?? 
-                               type.GetProperty("ProgramNumber") ?? 
-                               type.GetProperty("Patch") ?? 
-                               type.GetProperty("PatchNumber") ??
-                               type.GetProperty("wPreset");
-
-                foreach (var preset in font.Presets)
-                {
-                    try
-                    {
-                        int bank = bankProp != null ? (int)bankProp.GetValue(preset)! : 0;
-                        int program = progProp != null ? (int)progProp.GetValue(preset)! : 0;
-
-                        if (bank == 0 && program >= 0 && program <= 127)
-                        {
-                            if (!GM.ContainsKey(program))
-                            {
-                                string finalName;
-                                if (StandardNames.TryGetValue(program, out string? niceName))
-                                {
-                                    finalName = niceName;
-                                }
-                                else
-                                {
-                                    finalName = CleanName(preset.ToString()!);
-                                }
-
-                                GM.Add(program, finalName);
-                            }
-                        }
-                    }
-                    catch { }
-                }
+                GM.Add(program, StandardNames.TryGetValue(program, out string? niceName) ? niceName : CleanName(preset.Name));
             }
 
             if (GM.Count == 0)
             {
                 LoadDefault();
             }
+
+            Ids = GM.Keys.OrderBy(k => k).ToArray();
         }
-        
+
         private static string CleanName(string rawName)
         {
             if (string.IsNullOrEmpty(rawName)) return "Unknown";
             return rawName.Trim();
         }
-        
+
+        public static string NameOf(int id)
+        {
+            return GM.TryGetValue(id, out string? name) ? name : L.T("Unknown", "Desconhecido");
+        }
+
         public static int GetFirstAvailableId()
         {
-            return GM.Keys.OrderBy(k => k).FirstOrDefault();
+            return Ids.FirstOrDefault();
         }
 
         public static bool IsValid(int id)

@@ -1,0 +1,61 @@
+name: Release
+
+# Pushing a tag such as v1.5 builds the app and publishes the GitHub release that the in-app
+# updater looks for: the tag is the version and the zip is the first asset.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Check that the tag matches the version in the code
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $code = (Select-String -Path Constants.cs -Pattern 'Version = "([^"]+)"').Matches[0].Groups[1].Value
+          if ($version -ne $code) {
+            throw "Tag v$version does not match Constants.Version ($code). The updater would offer this release forever."
+          }
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      # Self-contained: users do not need to install the .NET runtime, which matters because
+      # the updater replaces the files of people who only had an older runtime.
+      - name: Publish
+        run: dotnet publish piano.csproj -c Release -r win-x64 --self-contained true -o publish
+
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path publish\* -DestinationPath "Piano-Virtual-v$env:VERSION.zip"
+
+      - name: Release notes from the changelog
+        shell: pwsh
+        run: |
+          $notes = @()
+          $inside = $false
+          foreach ($line in Get-Content CHANGELOG.md -Encoding utf8) {
+            if ($line -match '^## ') {
+              if ($inside) { break }
+              $inside = $line -match "^## \[?$([regex]::Escape($env:VERSION))\b"
+              continue
+            }
+            if ($inside) { $notes += $line }
+          }
+          if (-not $notes) { $notes = @("Piano Virtual v$env:VERSION") }
+          $notes | Set-Content notes.md -Encoding utf8
+
+      - name: Create the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" "Piano-Virtual-v$env:VERSION.zip" --title "Piano Virtual v$env:VERSION" --notes-file notes.md

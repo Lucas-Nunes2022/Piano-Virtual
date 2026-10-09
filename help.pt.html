@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #483D8B; border-bottom: 2px solid #483D8B; padding-bottom: 10px; }
+        h2 { color: #2F4F4F; margin-top: 20px; background-color: #e8e8e8; padding: 5px; border-radius: 4px; }
+        .key {
+            background-color: #333;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        ul { list-style-type: none; padding: 0; }
+        li { margin-bottom: 8px; }
+        strong { color: #000; }
+        pre { background-color: #fff; border: 1px solid #ccc; padding: 10px; font-family: 'Consolas', monospace; }
+        .tip {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffa502;
+            padding: 10px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Piano Virtual - Guia</h1>
+
+    <h2>Como Tocar</h2>
+    <p>O teclado do seu computador funciona como as teclas do piano:</p>
+    <ul>
+        <li><strong>Graves (Esq):</strong> <span class="key">Z</span> <span class="key">X</span> <span class="key">C</span> <span class="key">V</span> <span class="key">B</span> <span class="key">N</span> <span class="key">M</span></li>
+        <li><strong>Médios (Dir):</strong> <span class="key">Q</span> <span class="key">W</span> <span class="key">E</span> <span class="key">R</span> <span class="key">T</span> <span class="key">Y</span> <span class="key">U</span></li>
+        <li><strong>Pretas:</strong> <span class="key">S</span> <span class="key">D</span> ... <span class="key">2</span> <span class="key">3</span> <span class="key">4</span></li>
+    </ul>
+    <p>Um teclado MIDI ligado ao computador (Menu, Configurar) usa os mesmos recursos: camada, pedal, arranjador e gravação de pistas.</p>
+
+    <h2>Instrumentos e Camadas (Dual Voice)</h2>
+    <ul>
+        <li><span class="key">Setas ◄ / ►</span> : <strong>Trocar Instrumento Principal</strong></li>
+        <li><span class="key">Setas ▲ / ▼</span> : <strong>Mudar Oitava</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">Setas ▲ / ▼</span> : <strong>Mudar Força da Nota (Velocity)</strong></li>
+        <li><span class="key">F10</span> : <strong>Ligar/Desligar Camada Secundária</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">Setas ◄ / ►</span> : <strong>Trocar Instrumento da Camada</strong></li>
+    </ul>
+
+    <h2>Controles de Áudio</h2>
+    <ul>
+        <li><span class="key">Espaço</span> : <strong>Pedal Sustain</strong> (Segure para ecoar)</li>
+        <li><span class="key">Shift</span> + <span class="key">Espaço</span> : <strong>Pedal Fixo</strong> (desligado, contínuo, inteligente)</li>
+        <li><span class="key">F1</span> / <span class="key">F2</span> : Transposição (Mudar tom)</li>
+        <li><span class="key">F3</span> / <span class="key">F4</span> : Efeito Reverb</li>
+        <li><span class="key">F5</span> : <strong>Metrônomo</strong> (Configurar BPM)</li>
+        <li><span class="key">F6</span> / <span class="key">F7</span> : Efeito Chorus</li>
+        <li><span class="key">F8</span> / <span class="key">F9</span> : Efeito Modulação</li>
+    </ul>
+
+    <h2>Favoritos</h2>
+    <p>Salve seus sons preferidos para trocar rápido:</p>
+    <ul>
+        <li><strong>Salvar:</strong> <span class="key">Ctrl</span> + <span class="key">0-9</span></li>
+        <li><strong>Carregar:</strong> <span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">0-9</span></li>
+    </ul>
+
+    <h2>Arranjador (Acompanhamento Automático)</h2>
+    <p>Com o arranjador ligado, as teclas abaixo do ponto de divisão (de início o Dó 4, ou seja, a fileira do <span class="key">Z</span> ao <span class="key">M</span>) deixam de soar e passam a escolher o acorde. Bateria, baixo e harmonia tocam sozinhos no estilo escolhido, e o resto do teclado fica livre para a melodia. O acorde continua valendo depois que você solta as teclas.</p>
+    <ul>
+        <li><span class="key">F11</span> : <strong>Ligar / Desligar o arranjador</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">F11</span> : <strong>Ligar com introdução</strong>, ou encerrar com <strong>finalização</strong> se já estiver tocando</li>
+        <li><span class="key">F12</span> : <strong>Virada</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">F12</span> : <strong>Trocar variação A/B</strong> (com virada)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Setas ◄ / ►</span> : <strong>Trocar estilo</strong> (tocando, a troca acontece no próximo compasso)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Setas ▲ / ▼</span> : <strong>Andamento</strong> de 5 em 5 (com <span class="key">Shift</span>, de 1 em 1)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">PageUp</span> / <span class="key">PageDown</span> : <strong>Volume do acompanhamento</strong></li>
+        <li><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Setas ◄ / ►</span> : <strong>Ponto de divisão</strong></li>
+    </ul>
+    <p><strong>Acordes:</strong> uma tecla sozinha toca o acorde maior; <span class="key">Shift</span> + a tecla toca o <strong>menor</strong>; tônica mais terça menor toca o menor; tônica mais sétima toca o acorde com sétima. Com três ou mais teclas o programa reconhece maiores, menores, sétimas, diminutos, aumentados, sus e sextas, em qualquer inversão.</p>
+
+    <h2>Gravar um Estilo Tocando</h2>
+    <p>No menu Arranjador, escolha <strong>Gravar um Novo Estilo Tocando</strong> (começa do zero) ou <strong>Regravar Partes do Estilo Atual</strong> (parte de um estilo pronto). Você grava uma parte de cada vez, sempre tocando em <strong>Dó maior</strong>; depois o arranjador transporta tudo para o acorde que você fizer.</p>
+    <p>As partes são: Bateria, Baixo, Acordes e Pad da variação A, as mesmas quatro da variação B, e a Virada. O que ficar vazio na variação B e na virada usa o da variação A.</p>
+    <ul>
+        <li><span class="key">Ctrl</span> + <span class="key">T</span> : <strong>Próxima parte</strong> (com <span class="key">Shift</span>, a anterior)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">R</span> : <strong>Gravar</strong>. Há um compasso de contagem; toque e aperte de novo para parar. Grava até 4 compassos.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">P</span> ou <span class="key">F11</span> : <strong>Ouvir</strong> o estilo como está</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">P</span> : <strong>Ouvir só a parte selecionada</strong> (só o baixo, por exemplo)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">L</span> : <strong>Ouvir só a última gravação</strong>: só o que você acabou de gravar (a caixa, por exemplo), sem o que já estava lá</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Z</span> : <strong>Desfazer a última gravação</strong>. Errou a caixa? Só ela sai; o chimbal e o prato gravados antes ficam. Apertando de novo, volta mais uma gravação.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Delete</span> : <strong>Apagar</strong> a parte selecionada</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Setas ▲ / ▼</span> : <strong>Andamento</strong> do estilo</li>
+        <li><span class="key">Ctrl</span> + <span class="key">S</span> : <strong>Salvar</strong> o estilo e sair</li>
+        <li><span class="key">Esc</span> : <strong>Sair sem salvar</strong></li>
+    </ul>
+    <p>Enquanto o gravador está aberto, o menu <strong>Gravador de Estilos</strong> traz os mesmos comandos, mais <strong>Apagar Tudo e Recomeçar</strong>.</p>
+    <ul>
+        <li><strong>Bateria e Virada:</strong> as teclas viram a bateria: <span class="key">Z</span> bumbo, <span class="key">S</span> aro, <span class="key">X</span> caixa, <span class="key">D</span> palma, <span class="key">G</span> chimbal fechado, <span class="key">H</span> chimbal de pé, <span class="key">J</span> chimbal aberto, <span class="key">V</span> <span class="key">B</span> <span class="key">N</span> <span class="key">M</span> <span class="key">,</span> <span class="key">.</span> tons, <span class="key">L</span> prato de ataque, <span class="key">Ç</span> prato de condução. Cada gravação <u>soma</u> peças ao que já existe, então dá para gravar bumbo e caixa primeiro e o chimbal depois.</li>
+        <li><strong>Baixo:</strong> toque uma nota por vez. Dó é a tônica, Mi a terça, Sol a quinta, Lá ou Si bemol a sétima/sexta, e o Dó de cima a oitava.</li>
+        <li><strong>Acordes e Pad:</strong> duas ou mais teclas juntas contam como o acorde inteiro. Uma tecla sozinha vira arpejo: Dó, Mi e Sol são a primeira, segunda e terceira nota do acorde.</li>
+        <li>O instrumento da parte é o que estiver selecionado na hora da gravação, e o que você toca é ajustado para a grade de tempo do estilo.</li>
+    </ul>
+
+    <h2>Editar Estilos como Texto</h2>
+    <p>Cada estilo é um arquivo de texto, inclusive os que você grava tocando. No menu Arranjador, escolha <strong>Editar uma Cópia do Estilo Atual como Texto</strong>: o programa copia o estilo selecionado para a pasta Documentos, Piano Virtual, Styles e abre a cópia no Bloco de Notas, já com as instruções no começo do arquivo. Edite, salve e escolha <strong>Recarregar Estilos</strong>.</p>
+    <p>Cada padrão tem um caractere por passo. Com 4 passos por tempo, um compasso 4/4 tem 16 caracteres:</p>
+    <pre>[drums]
+kick  = x... .... x.x. ....
+snare = .... x... .... x...
+hat   = x.x. x.x. x.x. x.x.
+
+[bass]
+program = 33
+a = 1--- --1. ..1- 5-3.</pre>
+    <ul>
+        <li><strong>Bateria:</strong> <span class="key">.</span> silêncio, <span class="key">x</span> toque, <span class="key">X</span> acento, <span class="key">o</span> toque fraco</li>
+        <li><strong>Baixo:</strong> <span class="key">1</span> tônica, <span class="key">3</span> terça, <span class="key">5</span> quinta, <span class="key">7</span> sétima ou sexta, <span class="key">8</span> oitava</li>
+        <li><strong>Acordes:</strong> <span class="key">x</span> acorde inteiro, <span class="key">1</span> a <span class="key">4</span> notas soltas (arpejo)</li>
+        <li><span class="key">-</span> mantém a nota anterior soando</li>
+    </ul>
+
+    <h2>Música (Gravação por Pistas)</h2>
+    <p>Grave até 6 pistas, uma de cada vez, cada uma com seu instrumento. Enquanto você grava uma pista, as outras tocam. Se o arranjador estiver ligado na gravação, o acompanhamento também fica gravado, numa pista própria.</p>
+    <ul>
+        <li><span class="key">Ctrl</span> + <span class="key">R</span> : <strong>Gravar / parar a gravação</strong> na pista selecionada (há um compasso de contagem)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">P</span> : <strong>Tocar / Parar</strong></li>
+        <li><span class="key">Ctrl</span> + <span class="key">T</span> : <strong>Próxima pista</strong> (com <span class="key">Shift</span>, a anterior)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">M</span> : <strong>Silenciar / ouvir</strong> a pista selecionada</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Q</span> : <strong>Quantizar</strong> a pista selecionada: encaixa as notas na grade de tempo (colcheia, semicolcheia, tercina). A força escolhe o quanto: 100% cola na grade, 50% só aproxima. Música, Desfazer Quantização volta a como você tocou.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">N</span> / <span class="key">O</span> / <span class="key">S</span> : <strong>Nova música / Abrir / Salvar</strong> como arquivo MIDI</li>
+    </ul>
+    <p>Gravar de novo numa pista substitui o que havia nela. Para regravar o acompanhamento, selecione a pista de acompanhamento e use Música, Limpar Pista.</p>
+
+    <div class="tip">
+        <strong>Dica de Gravação:</strong> O som do metrônomo sai no seu dispositivo de som, mas <u>não</u> sai no arquivo de áudio gravado.
+    </div>
+</body>
+</html>

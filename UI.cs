@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -53,16 +54,33 @@ namespace piano
                     BringWindowToTop(handle);
                     SetForegroundWindow(handle);
                 }
-                
+
                 form.Activate();
                 form.Focus();
             }
             catch { }
         }
 
+        // The screens are rebuilt every time the user moves between them, so the fonts are shared
+        // instead of being created (and leaked) on each rebuild.
+        private static readonly Font TitleFont = new Font("Segoe UI", 24, FontStyle.Bold);
+        private static readonly Font HeadingFont = new Font("Segoe UI", 18, FontStyle.Bold);
+        private static readonly Font PedalFont = new Font("Segoe UI", 12, FontStyle.Bold);
+        private static readonly Font BoldFont = new Font("Segoe UI", 10, FontStyle.Bold);
+        private static readonly Font InfoFont = new Font("Consolas", 10);
+
         private static string _tempRecPath = "";
         private static bool _firstLoad = true;
         private static bool _isPianoScreen = true;
+        private static int _statusVersion;
+
+        private static Form? _form;
+        private static Label? _lblStatus, _lblInstr, _lblOctave, _lblTranspose, _lblVelocity, _lblPedal, _lblArranger, _lblSong;
+        private static ToolStripItem? _miRecord, _miCancelRecording;
+
+        private static string RecordText => L.T("&Record Performance...", "&Gravar Performance...");
+        private static string StopRecordText => L.T("Stop Recording", "Parar Gravação");
+        private static string CancelRecordText => L.T("&Cancel Recording", "&Cancelar Gravação");
 
         private static void ClearFormControls(Form form)
         {
@@ -72,6 +90,14 @@ namespace piano
                 form.Controls.RemoveAt(0);
                 c.Dispose();
             }
+
+            _lblStatus = _lblInstr = _lblOctave = _lblTranspose = _lblVelocity = _lblPedal = _lblArranger = _lblSong = null;
+            _miRecord = _miCancelRecording = null;
+        }
+
+        private static void OpenLink(string url)
+        {
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }); } catch { }
         }
 
         public static void BuildMain()
@@ -79,13 +105,14 @@ namespace piano
             _isPianoScreen = true;
 
             var form = Wf.Get<Form>("_Form");
+            _form = form;
 
             if (form != null)
             {
-                form.Text = $"Piano Virtual v{Constantes.versao}";
+                form.Text = L.T($"Virtual Piano v{Constants.Version}", $"Piano Virtual v{Constants.Version}");
 
                 ClearFormControls(form);
-                
+
                 if (form.MainMenuStrip != null)
                 {
                     form.MainMenuStrip.Dispose();
@@ -93,65 +120,133 @@ namespace piano
                 }
             }
 
-            Wf.menu(
+            // A tab separates the name of a command from its keyboard shortcut
+            var arranger = new List<(string, Action)>
+            {
+                (L.T("&Start / Stop\tF11", "&Ligar / Desligar\tF11"), () => MidiManager.ToggleArranger(false)),
+                (L.T("Start with &Intro / Ending\tShift+F11", "Ligar com &Introdução / Finalização\tShift+F11"), () => MidiManager.ToggleArranger(true)),
+                (L.T("&Fill-in\tF12", "&Virada\tF12"), () => MidiManager.ArrangerFill(false)),
+                (L.T("Switch &Variation A/B\tShift+F12", "Trocar V&ariação A/B\tShift+F12"), () => MidiManager.ArrangerFill(true)),
+                ("-", () => { }),
+                (L.T("&Next Style\tCtrl+Right", "&Próximo Estilo\tCtrl+Direita"), () => MidiManager.ChangeStyle(1)),
+                (L.T("&Previous Style\tCtrl+Left", "Estilo A&nterior\tCtrl+Esquerda"), () => MidiManager.ChangeStyle(-1)),
+                (L.T("Tempo &Up\tCtrl+Up", "A&umentar Andamento\tCtrl+Cima"), () => MidiManager.ChangeTempo(5)),
+                (L.T("Tempo &Down\tCtrl+Down", "&Diminuir Andamento\tCtrl+Baixo"), () => MidiManager.ChangeTempo(-5)),
+                (L.T("Accompaniment &Louder\tCtrl+PageUp", "Acompanhamento Mais Al&to\tCtrl+PageUp"), () => MidiManager.ChangeAccompVolume(10)),
+                (L.T("Accompaniment &Quieter\tCtrl+PageDown", "Acompanhamento Mais &Baixo\tCtrl+PageDown"), () => MidiManager.ChangeAccompVolume(-10)),
+                (L.T("Split Point Hi&gher\tCtrl+Shift+Right", "Ponto de Divisão Mais A&gudo\tCtrl+Shift+Direita"), () => MidiManager.ChangeSplitPoint(1)),
+                (L.T("Split Point Lo&wer\tCtrl+Shift+Left", "Ponto de Divisão Mais Gra&ve\tCtrl+Shift+Esquerda"), () => MidiManager.ChangeSplitPoint(-1)),
+                ("-", () => { }),
+                (L.T("Record a New Style by Pla&ying...", "Gravar um Novo Estilo &Tocando..."), () => MidiManager.OpenStyleRecorder(false)),
+                (L.T("Re-record Parts of the Current St&yle...", "Regravar Partes do Estilo At&ual..."), () => MidiManager.OpenStyleRecorder(true)),
+                (L.T("&Edit a Copy of the Current Style as Text...", "Editar uma &Cópia do Estilo Atual como Texto..."), MidiManager.NewStyleFromCurrent),
+                (L.T("&Open Styles Folder", "Abrir Pasta de &Estilos"), MidiManager.OpenStylesFolder),
+                (L.T("&Reload Styles", "&Recarregar Estilos"), MidiManager.ReloadStyles),
+                ("-", () => { })
+            };
+            foreach (var style in Styles.All)
+                arranger.Add((L.T("Style: ", "Estilo: ") + style.DisplayName, () => MidiManager.SetStyle(style)));
+
+            var menus = new List<(string, (string, Action)[])>
+            {
                 ("&Menu", new (string, Action)[] {
-                    ("&Configurar...", OpenSettingsWindow),
-                    ("&Oitava padrão", () => { MidiManager.ResetOctave(); Wf.msg("Oitava definida para a padrão!"); }),
+                    (L.T("&Settings...", "&Configurar..."), OpenSettingsWindow),
+                    (L.T("&Default octave", "&Oitava padrão"), () => { MidiManager.ResetOctave(); Wf.msg(L.T("Octave set back to the default!", "Oitava definida para a padrão!")); }),
                     ("-", () => { }),
-                    ("&Sair", () => Application.Exit())
+                    (L.T("E&xit", "&Sair"), () => Application.Exit())
                 }),
-                ("&Gravação", new (string, Action)[] {
-                    ("&Gravar Performance...", ToggleRecording),
-                    ("&Cancelar Gravação", CancelRecordingUI)
-                }),
-                ("&Ajuda", new (string, Action)[] {
-                    ("Ver &Atalhos", ShowShortcuts),
+                (L.T("&Arranger", "A&rranjador"), arranger.ToArray()),
+                (L.T("&Song", "Mú&sica"), new (string, Action)[] {
+                    (L.T("&Record / Stop Recording Track\tCtrl+R", "&Gravar / Parar Gravação da Pista\tCtrl+R"), MidiManager.ToggleSongRecording),
+                    (L.T("&Play / Stop\tCtrl+P", "&Tocar / Parar\tCtrl+P"), MidiManager.TogglePlayback),
                     ("-", () => { }),
-                    ("&Visite meu site", () => {
-                        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Constantes.site) { UseShellExecute = true }); } catch { }
-                    }),
-                    ("&código fonte", () => {
-                        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Constantes.github) { UseShellExecute = true }); } catch { }
-                    }),
-                    ("&Sobre", () => Wf.msg($"Piano Virtual v{Constantes.versao}.\nDesenvolvido por Lucas Nunes Costa.", "Sobre"))
+                    (L.T("&Next Track\tCtrl+T", "&Próxima Pista\tCtrl+T"), () => MidiManager.SelectTrack(1)),
+                    (L.T("Pre&vious Track\tCtrl+Shift+T", "Pista &Anterior\tCtrl+Shift+T"), () => MidiManager.SelectTrack(-1)),
+                    (L.T("&Mute / Unmute Track\tCtrl+M", "&Silenciar / Ouvir Pista\tCtrl+M"), MidiManager.ToggleTrackMute),
+                    (L.T("&Quantize Track...\tCtrl+Q", "&Quantizar Pista...\tCtrl+Q"), MidiManager.QuantizeTrack),
+                    (L.T("&Undo Quantize", "&Desfazer Quantização"), MidiManager.UndoQuantize),
+                    (L.T("&Clear Track...", "&Limpar Pista..."), MidiManager.ClearTrack),
+                    ("-", () => { }),
+                    (L.T("N&ew Song\tCtrl+N", "&Nova Música\tCtrl+N"), MidiManager.NewSong),
+                    (L.T("&Open MIDI File...\tCtrl+O", "A&brir Arquivo MIDI...\tCtrl+O"), MidiManager.OpenSong),
+                    (L.T("&Save as MIDI File...\tCtrl+S", "Sal&var como Arquivo MIDI...\tCtrl+S"), MidiManager.SaveSong)
+                }),
+                (L.T("Audio &Recording", "&Gravação de Áudio"), new (string, Action)[] {
+                    (RecordText, ToggleRecording),
+                    (CancelRecordText, CancelRecordingUI)
+                }),
+                (L.T("&Help", "&Ajuda"), new (string, Action)[] {
+                    (L.T("View &Shortcuts", "Ver &Atalhos"), ShowShortcuts),
+                    ("-", () => { }),
+                    (L.T("&Visit my website", "&Visite meu site"), () => OpenLink(Constants.Site)),
+                    (L.T("Source &code", "&Código fonte"), () => OpenLink(Constants.GitHub)),
+                    (L.T("&About", "&Sobre"), () => Wf.msg(
+                        L.T($"Virtual Piano v{Constants.Version}.\nDeveloped by Lucas Nunes Costa.", $"Piano Virtual v{Constants.Version}.\nDesenvolvido por Lucas Nunes Costa."),
+                        L.T("About", "Sobre")))
                 })
-            );
+            };
+
+            // While a style is being recorded its commands get a menu of their own, right after "Menu"
+            if (MidiManager.IsStyleRecorderOpen)
+            {
+                menus.Insert(1, (L.T("Style Re&corder", "Gravador de &Estilos"), new (string, Action)[] {
+                    (L.T("&Record / Stop Recording this Part\tCtrl+R", "&Gravar / Parar Gravação desta Parte\tCtrl+R"), MidiManager.ToggleStyleRecording),
+                    (L.T("&Listen / Stop\tCtrl+P", "&Ouvir / Parar\tCtrl+P"), () => MidiManager.ToggleStylePreview()),
+                    (L.T("Listen to this Part &Only / Stop\tCtrl+Shift+P", "Ouvir &Só esta Parte / Parar\tCtrl+Shift+P"), () => MidiManager.ToggleStylePreview(solo: true)),
+                    ("-", () => { }),
+                    (L.T("&Next Part\tCtrl+T", "&Próxima Parte\tCtrl+T"), () => MidiManager.SelectStyleSlot(1)),
+                    (L.T("&Previous Part\tCtrl+Shift+T", "Parte &Anterior\tCtrl+Shift+T"), () => MidiManager.SelectStyleSlot(-1)),
+                    (L.T("Listen to the Last Recording Onl&y / Stop\tCtrl+L", "Ouvir Só a Ú&ltima Gravação / Parar\tCtrl+L"), MidiManager.ToggleLastTakePreview),
+                    (L.T("&Undo Last Recording\tCtrl+Z", "&Desfazer Última Gravação\tCtrl+Z"), MidiManager.UndoStyleRecording),
+                    (L.T("&Erase this Part\tCtrl+Delete", "A&pagar esta Parte\tCtrl+Delete"), MidiManager.ClearStyleSlot),
+                    (L.T("Erase &Everything and Start Over...", "Apagar &Tudo e Recomeçar..."), MidiManager.ClearStyleDraft),
+                    ("-", () => { }),
+                    (L.T("&Save Style and Close\tCtrl+S", "&Salvar Estilo e Fechar\tCtrl+S"), MidiManager.SaveStyleDraft),
+                    (L.T("&Close without Saving\tEsc", "&Fechar sem Salvar\tEsc"), MidiManager.CancelStyleRecorder)
+                }));
+            }
+
+            Wf.menu(menus.ToArray());
 
             Wf.vStack(() =>
             {
                 Wf.panel(() => { }, p => { p.Height = 20; p.BorderStyle = BorderStyle.None; });
 
-                Wf.label("Piano Virtual", l => {
-                    l.Font = new Font("Segoe UI", 24, FontStyle.Bold);
+                Wf.label(L.T("Virtual Piano", "Piano Virtual"), l => {
+                    l.Font = TitleFont;
                     l.ForeColor = Color.DarkSlateBlue;
                     l.TextAlign = ContentAlignment.MiddleCenter;
                     l.Dock = DockStyle.Top;
                 });
 
-                Wf.label("", "lblStatus", l => {
+                _lblStatus = Wf.label("", "lblStatus", l => {
                     l.ForeColor = Color.Red;
-                    l.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                    l.Font = BoldFont;
                     l.TextAlign = ContentAlignment.MiddleCenter;
                     l.Height = 25;
                 });
 
                 Wf.panel(() => {
                     Wf.hStack(() => {
-                        Wf.label("Instrumento: 000", "lbl_instr", l => StyleInfoLabel(l));
-                        Wf.label("Oitava: 4", "lbl_octave", l => StyleInfoLabel(l));
-                        Wf.label("Transp: 0", "lbl_transpose", l => StyleInfoLabel(l));
-                        Wf.label("Força: 100", "lbl_velocity", l => StyleInfoLabel(l));
+                        _lblInstr = Wf.label("", "lbl_instr", l => StyleInfoLabel(l));
+                        _lblOctave = Wf.label("", "lbl_octave", l => StyleInfoLabel(l));
+                        _lblTranspose = Wf.label("", "lbl_transpose", l => StyleInfoLabel(l));
+                        _lblVelocity = Wf.label("", "lbl_velocity", l => StyleInfoLabel(l));
                     });
                 }, p => { p.Padding = new Padding(10, 0, 10, 10); p.Height = 45; });
 
-                Wf.label("PEDAL LIVRE", "lbl_pedal", l => {
-                    l.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+                _lblPedal = Wf.label("", "lbl_pedal", l => {
+                    l.Font = PedalFont;
                     l.ForeColor = Color.Gray;
                     l.TextAlign = ContentAlignment.MiddleCenter;
                     l.Padding = new Padding(0, 5, 0, 10);
                 });
 
-                Wf.label("Espaço: Pedal  |  F1/F2: Transpose  |  F10: Camada", l => {
+                _lblArranger = Wf.label("", "lbl_arranger", l => StyleInfoLabel(l));
+                _lblSong = Wf.label("", "lbl_song", l => StyleInfoLabel(l));
+
+                Wf.label(L.T("Space: Pedal  |  F1/F2: Transpose  |  F10: Layer  |  F11: Arranger  |  F12: Fill-in  |  Ctrl+R: Record track",
+                             "Espaço: Pedal  |  F1/F2: Transpose  |  F10: Camada  |  F11: Arranjador  |  F12: Virada  |  Ctrl+R: Gravar pista"), l => {
                     l.ForeColor = Color.DimGray;
                     l.TextAlign = ContentAlignment.MiddleCenter;
                     l.Dock = DockStyle.Bottom;
@@ -159,8 +254,16 @@ namespace piano
                 });
             });
 
+            if (form?.MainMenuStrip != null)
+            {
+                foreach (ToolStripItem top in form.MainMenuStrip.Items) SplitShortcuts(top);
+                _miRecord = FindMenuItem(RecordText);
+                _miCancelRecording = FindMenuItem(CancelRecordText);
+            }
+
             UpdateDisplay();
-            SetMenuVisible("&Cancelar Gravação", false);
+            UpdateLive();
+            UpdateRecordingMenu();
 
             if (form != null)
             {
@@ -168,6 +271,57 @@ namespace piano
                 form.Activate();
                 form.Focus();
             }
+        }
+
+        // "Name\tShortcut" becomes a menu item with the shortcut shown on the right, where screen
+        // readers also announce it.
+        private static void SplitShortcuts(ToolStripItem item)
+        {
+            if (item is not ToolStripMenuItem menuItem) return;
+
+            string text = menuItem.Text ?? "";
+            int tab = text.IndexOf('\t');
+            if (tab >= 0)
+            {
+                menuItem.Text = text.Substring(0, tab);
+                menuItem.ShortcutKeyDisplayString = text.Substring(tab + 1);
+            }
+
+            foreach (ToolStripItem child in menuItem.DropDownItems) SplitShortcuts(child);
+        }
+
+        private static ToolStripItem? FindMenuItem(string text)
+        {
+            var menu = _form?.MainMenuStrip;
+            if (menu == null) return null;
+
+            foreach (ToolStripItem top in menu.Items)
+            {
+                var found = FindMenuItem(top, text);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        private static ToolStripItem? FindMenuItem(ToolStripItem item, string text)
+        {
+            if (item.Text == text) return item;
+            if (item is not ToolStripDropDownItem dropDown) return null;
+
+            foreach (ToolStripItem child in dropDown.DropDownItems)
+            {
+                var found = FindMenuItem(child, text);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        private static void UpdateRecordingMenu()
+        {
+            bool recording = MidiManager.IsRecording();
+            if (_miRecord != null) _miRecord.Text = recording ? StopRecordText : RecordText;
+            if (_miCancelRecording != null) _miCancelRecording.Visible = recording;
+            if (recording) UpdateStatus(L.T("RECORDING...", "GRAVANDO..."));
         }
 
         private static void OpenSettingsWindow()
@@ -178,48 +332,50 @@ namespace piano
 
             if (form == null) return;
 
-            Wf.wt("Configurações");
+            Wf.wt(L.T("Settings", "Configurações"));
 
             ClearFormControls(form);
             if (form.MainMenuStrip != null) form.MainMenuStrip = null;
 
             Wf.vStack(() =>
             {
-                Wf.label("Configurações", l => {
-                    l.Font = new Font("Segoe UI", 18, FontStyle.Bold);
+                Wf.label(L.T("Settings", "Configurações"), l => {
+                    l.Font = HeadingFont;
                     l.ForeColor = Color.DarkSlateBlue;
                     l.Margin = new Padding(0, 20, 0, 20);
                 });
 
-                Wf.group("Dispositivos", () =>
+                Wf.group(L.T("Devices", "Dispositivos"), () =>
                 {
                     Wf.hStack(() => {
-                        Wf.label("Selecione o dispositivo de entrada:");
+                        Wf.label(L.T("Select the input device:", "Selecione o dispositivo de entrada:"));
 
-                        Wf.combo(GetMidiInDevices(), "cb_in");
+                        Wf.combo(GetMidiInDevices(), "cb_in", cb => {
+                            if (Config.MidiInputId >= 0 && Config.MidiInputId < cb.Items.Count) cb.SelectedIndex = Config.MidiInputId;
+                        });
 
-                        Wf.button("Atualizar lista de dispositivos", () => {
+                        Wf.button(L.T("Refresh device list", "Atualizar lista de dispositivos"), () => {
                             var cb = Wf.Get<ComboBox>("cb_in");
                             if (cb != null)
                             {
                                 cb.Items.Clear();
                                 cb.Items.AddRange(GetMidiInDevices());
                                 if (cb.Items.Count > 0) cb.SelectedIndex = 0;
-                                Sp.Speak("Lista atualizada");
+                                Sp.Speak(L.T("List refreshed", "Lista atualizada"));
                             }
                         }, b => {
                             b.Width = 30;
                             b.Height = 23;
                             b.Padding = new Padding(0);
                             b.TextAlign = ContentAlignment.MiddleCenter;
-                            b.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                            b.Font = BoldFont;
                         });
                     });
                 });
 
-                Wf.group("Gravações", () =>
+                Wf.group(L.T("Recordings", "Gravações"), () =>
                 {
-                    Wf.label("Pasta Padrão:");
+                    Wf.label(L.T("Default Folder:", "Pasta Padrão:"));
                     Wf.label(_tempRecPath, "lbl_path", l => {
                         l.AutoEllipsis = true;
                         l.ForeColor = Color.Gray;
@@ -228,7 +384,7 @@ namespace piano
                         l.Width = 300;
                     });
 
-                    Wf.button("Selecionar Pasta...", () => {
+                    Wf.button(L.T("Select Folder...", "Selecionar Pasta..."), () => {
                         using var fbd = new FolderBrowserDialog();
                         fbd.SelectedPath = _tempRecPath;
                         if (fbd.ShowDialog() == DialogResult.OK)
@@ -239,20 +395,31 @@ namespace piano
                     });
                 });
 
+                Wf.group(L.T("Language", "Idioma"), () =>
+                {
+                    Wf.hStack(() => {
+                        Wf.label(L.T("Language of the program:", "Idioma do programa:"));
+                        Wf.combo(new[] { L.T("Same as Windows", "O mesmo do Windows"), "English", "Português" }, "cb_lang", cb => {
+                            int index = Math.Max(0, Array.IndexOf(LanguageCodes, Config.Language));
+                            if (index < cb.Items.Count) cb.SelectedIndex = index;
+                        });
+                    });
+                });
+
                 Wf.panel(() => { }, p => p.Height = 20);
 
                 Wf.hStack(() =>
                 {
-                    Wf.button("Aplicar", () => {
+                    Wf.button(L.T("Apply", "Aplicar"), () => {
                         ApplySettings();
-                        Wf.msg("Configurações salvas com sucesso!");
+                        Wf.msg(L.T("Settings saved successfully!", "Configurações salvas com sucesso!"));
                         BuildMain();
                     }, b => {
                         b.BackColor = Color.LightGreen;
                         b.Width = 120;
                     });
 
-                    Wf.button("Cancelar", () => {
+                    Wf.button(L.T("Cancel", "Cancelar"), () => {
                         BuildMain();
                     }, b => {
                         b.Width = 120;
@@ -268,63 +435,66 @@ namespace piano
             if (cb != null) cb.Select();
         }
 
+        private static readonly string[] LanguageCodes = { "auto", "en", "pt" };
+
         private static async void ToggleRecording()
         {
             if (MidiManager.IsRecording())
             {
                 StopRecordingUI();
-                UpdateMenuText("Parar Gravação", "&Gravar Performance...");
             }
             else
             {
-                if (await StartRecordingUI())
-                {
-                    UpdateMenuText("&Gravar Performance...", "Parar Gravação");
-                    SetMenuVisible("&Cancelar Gravação", true);
-                }
+                await StartRecordingUI();
             }
+            UpdateRecordingMenu();
         }
 
         private static async Task<bool> StartRecordingUI()
         {
             string savedPath = Config.RecordingPath;
+            string fileName = $"Piano_Rec_{DateTime.Now:yyyyMMdd_HHmmss}.wav";
+            string fullPath;
 
             if (!string.IsNullOrWhiteSpace(savedPath) && Directory.Exists(savedPath))
             {
-                string fileName = $"Piano_Rec_{DateTime.Now:yyyyMMdd_HHmmss}.wav";
-                string fullPath = Path.Combine(savedPath, fileName);
-
-                MidiManager.StartRecording(fullPath);
-                UpdateStatus("GRAVANDO...");
-
-                await Task.Delay(500);
-                Sp.Speak("Gravando");
-                return true;
+                fullPath = Path.Combine(savedPath, fileName);
             }
-
-            using var sfd = new SaveFileDialog();
-            sfd.Filter = "Arquivo de Áudio WAV|*.wav";
-            sfd.FileName = $"Piano_Rec_{DateTime.Now:yyyyMMdd_HHmmss}.wav";
-            sfd.InitialDirectory = Config.GetRecordingPath();
-
-            if (sfd.ShowDialog() == DialogResult.OK)
+            else
             {
-                string? pasta = Path.GetDirectoryName(sfd.FileName);
+                using var sfd = new SaveFileDialog();
+                sfd.Filter = L.T("WAV Audio File|*.wav", "Arquivo de Áudio WAV|*.wav");
+                sfd.FileName = fileName;
+                sfd.InitialDirectory = Config.GetRecordingPath();
 
-                if (!string.IsNullOrEmpty(pasta))
+                if (sfd.ShowDialog() != DialogResult.OK) return false;
+
+                string? folder = Path.GetDirectoryName(sfd.FileName);
+
+                if (!string.IsNullOrEmpty(folder))
                 {
-                    Config.RecordingPath = pasta;
+                    Config.RecordingPath = folder;
                     Config.Save();
                 }
 
-                MidiManager.StartRecording(sfd.FileName);
-                UpdateStatus("GRAVANDO...");
-
-                await Task.Delay(500);
-                Sp.Speak("Gravando");
-                return true;
+                fullPath = sfd.FileName;
             }
-            return false;
+
+            try
+            {
+                MidiManager.StartRecording(fullPath);
+            }
+            catch (Exception ex)
+            {
+                Wf.msg(L.T("Could not start recording: ", "Não foi possível iniciar a gravação: ") + ex.Message);
+                return false;
+            }
+
+            UpdateStatus(L.T("RECORDING...", "GRAVANDO..."));
+
+            await Task.Delay(500);
+            Sp.Speak(L.T("Recording", "Gravando"));
+            return true;
         }
 
         private static void StopRecordingUI()
@@ -333,8 +503,7 @@ namespace piano
 
             MidiManager.StopRecording();
             UpdateStatus("");
-            SetMenuVisible("&Cancelar Gravação", false);
-            Wf.msg("Gravação salva com sucesso!");
+            Wf.msg(L.T("Recording saved successfully!", "Gravação salva com sucesso!"));
         }
 
         private static void CancelRecordingUI()
@@ -343,146 +512,68 @@ namespace piano
 
             MidiManager.AbortRecording();
             UpdateStatus("");
+            UpdateRecordingMenu();
 
-            UpdateMenuText("Parar Gravação", "&Gravar Performance...");
-            SetMenuVisible("&Cancelar Gravação", false);
-
-            Wf.msg("Gravação cancelada e arquivo descartado.");
-            Sp.Speak("Gravação cancelada");
-        }
-
-        private static void UpdateMenuText(string currentText, string newText)
-        {
-            var form = Wf.Get<Form>("_Form");
-            if (form != null && form.MainMenuStrip != null)
-            {
-                foreach (ToolStripMenuItem topItem in form.MainMenuStrip.Items)
-                {
-                    if (TryFindAndReplace(topItem, currentText, newText)) break;
-                }
-            }
-        }
-
-        private static bool TryFindAndReplace(ToolStripDropDownItem item, string target, string replacement)
-        {
-            string cleanItemText = (item.Text ?? "").Replace("&", "");
-            string cleanTarget = target.Replace("&", "");
-
-            if (cleanItemText == cleanTarget)
-            {
-                item.Text = replacement;
-                return true;
-            }
-
-            if (item.DropDownItems != null)
-            {
-                foreach (ToolStripItem subItem in item.DropDownItems)
-                {
-                    if (subItem is ToolStripDropDownItem dropDownItem)
-                    {
-                        if (TryFindAndReplace(dropDownItem, target, replacement)) return true;
-                    }
-                    else if ((subItem.Text ?? "").Replace("&", "") == cleanTarget)
-                    {
-                        subItem.Text = replacement;
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        private static void SetMenuVisible(string targetText, bool visible)
-        {
-            var form = Wf.Get<Form>("_Form");
-            if (form != null && form.MainMenuStrip != null)
-            {
-                foreach (ToolStripMenuItem topItem in form.MainMenuStrip.Items)
-                {
-                    if (TrySetVisible(topItem, targetText, visible)) break;
-                }
-            }
-        }
-
-        private static bool TrySetVisible(ToolStripDropDownItem item, string target, bool visible)
-        {
-            string cleanItemText = (item.Text ?? "").Replace("&", "");
-            string cleanTarget = target.Replace("&", "");
-
-            if (cleanItemText == cleanTarget)
-            {
-                item.Visible = visible;
-                return true;
-            }
-
-            if (item.DropDownItems != null)
-            {
-                foreach (ToolStripItem subItem in item.DropDownItems)
-                {
-                    if (subItem is ToolStripDropDownItem dropDownItem)
-                    {
-                        if (TrySetVisible(dropDownItem, target, visible)) return true;
-                    }
-                    else if ((subItem.Text ?? "").Replace("&", "") == cleanTarget)
-                    {
-                        subItem.Visible = visible;
-                        return true;
-                    }
-                }
-            }
-            return false;
+            Wf.msg(L.T("Recording canceled and file discarded.", "Gravação cancelada e arquivo descartado."));
+            Sp.Speak(L.T("Recording canceled", "Gravação cancelada"));
         }
 
         public static async void ShowStatusTemp(string msg)
         {
             if (MidiManager.IsRecording()) return;
+
+            // a newer message must not be wiped by the timer of an older one
+            int version = ++_statusVersion;
             UpdateStatus(msg);
             await Task.Delay(2000);
-            if (!MidiManager.IsRecording()) UpdateStatus("");
+            if (version == _statusVersion && !MidiManager.IsRecording()) UpdateStatus("");
         }
 
         private static void ShowShortcuts()
         {
             _isPianoScreen = false;
 
-            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "help.html");
-            
-            if (!File.Exists(path))
-            {
-                File.WriteAllText(path, "<html><body><h1>Erro</h1><p>Arquivo help.html não encontrado.</p></body></html>");
-            }
-
             var form = Wf.Get<Form>("_Form");
             if (form == null) return;
 
-            Wf.wt("Ajuda - Comandos");
+            Wf.wt(L.T("Help - Commands", "Ajuda - Comandos"));
             ClearFormControls(form);
             if (form.MainMenuStrip != null) form.MainMenuStrip = null;
 
 
-            Wf.btn("Voltar", () => BuildMain(), b => {
+            Wf.btn(L.T("Back", "Voltar"), () => BuildMain(), b => {
                 b.Dock = DockStyle.Bottom;
                 b.Height = 40;
                 b.Cursor = Cursors.Hand;
-                b.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                b.Font = BoldFont;
             });
 
             var browser = new WebBrowser();
             browser.Dock = DockStyle.Fill;
             browser.IsWebBrowserContextMenuEnabled = false;
             browser.WebBrowserShortcutsEnabled = false;
-            browser.AllowNavigation = false;
-            
-            browser.Navigate(path);
+
+            string path = Path.Combine(AppContext.BaseDirectory, $"help.{L.Code}.html");
+            if (File.Exists(path))
+            {
+                browser.AllowNavigation = false;
+                browser.Navigate(path);
+            }
+            else
+            {
+                browser.DocumentText = L.T(
+                    $"<html><body><h1>Error</h1><p>File help.{L.Code}.html not found.</p></body></html>",
+                    $"<html><body><h1>Erro</h1><p>Arquivo help.{L.Code}.html não encontrado.</p></body></html>");
+            }
 
             form.Controls.Add(browser);
-            
+
             browser.BringToFront();
         }
 
         private static void StyleInfoLabel(Label l)
         {
-            l.Font = new Font("Consolas", 10);
+            l.Font = InfoFont;
             l.AutoSize = true;
             l.Padding = new Padding(5);
             l.BorderStyle = BorderStyle.FixedSingle;
@@ -490,78 +581,92 @@ namespace piano
             l.Margin = new Padding(5);
         }
 
+        // For commands that come from the menu: rebuilds the screen once the menu has finished closing
+        public static void RebuildMain() => RunOnUiThread(BuildMain);
+
+        public static void RunOnUiThread(Action action)
+        {
+            var form = _form;
+            if (form == null || form.IsDisposed || !form.IsHandleCreated) return;
+            try { form.BeginInvoke(action); } catch { }
+        }
+
         public static void UpdateDisplay()
         {
             try
             {
-                var form = Wf.Get<Form>("_Form");
-                if (form == null || form.IsDisposed) return;
+                var form = _form;
+                if (form == null || form.IsDisposed || _lblInstr == null) return;
 
-                if (!form.Controls.ContainsKey("lbl_instr")) return;
+                if (form.InvokeRequired) { form.BeginInvoke((MethodInvoker)UpdateDisplay); return; }
 
-                if (form.InvokeRequired) { form.Invoke((MethodInvoker)UpdateDisplay); return; }
-
-                string instrName = Instruments.GM.ContainsKey(MidiManager.CurrentInstrument)
-                    ? Instruments.GM[MidiManager.CurrentInstrument]
-                    : "Unknown";
+                string instrName = Instruments.NameOf(MidiManager.CurrentInstrument);
 
                 if (instrName.Length > 20) instrName = instrName.Substring(0, 18) + "..";
 
                 if (MidiManager.IsLayerActive)
                 {
-                    string layerName = Instruments.GM.ContainsKey(MidiManager.LayerInstrument)
-                        ? Instruments.GM[MidiManager.LayerInstrument]
-                        : "Unknown";
-                    
-                    if (layerName.Length > 15) layerName = layerName.Substring(0, 13) + "..";
-                    Wf.Set("lbl_instr", $"{MidiManager.CurrentInstrument:000} + {MidiManager.LayerInstrument:000}");
+                    _lblInstr.Text = $"{MidiManager.CurrentInstrument:000} + {MidiManager.LayerInstrument:000}";
                 }
                 else
                 {
-                    Wf.Set("lbl_instr", $"{MidiManager.CurrentInstrument:000}: {instrName}");
+                    _lblInstr.Text = $"{MidiManager.CurrentInstrument:000}: {instrName}";
                 }
 
-                Wf.Set("lbl_octave", $"Oitava: {(MidiManager.BaseOctave / 12) - 1}");
-                Wf.Set("lbl_transpose", $"Transp: {MidiManager.Transpose:+#;-#;0}");
-                Wf.Set("lbl_velocity", $"Força: {MidiManager.NoteVelocity}");
+                if (_lblOctave != null) _lblOctave.Text = L.T($"Octave: {(MidiManager.BaseOctave / 12) - 1}", $"Oitava: {(MidiManager.BaseOctave / 12) - 1}");
+                if (_lblTranspose != null) _lblTranspose.Text = $"Transp: {MidiManager.Transpose:+#;-#;0}";
+                if (_lblVelocity != null) _lblVelocity.Text = L.T($"Velocity: {MidiManager.NoteVelocity}", $"Força: {MidiManager.NoteVelocity}");
 
-                var lblPedal = Wf.Get<Label>("lbl_pedal");
+                var lblPedal = _lblPedal;
                 if (lblPedal != null)
                 {
+                    bool continuous = MidiManager.SustainLockMode == 1;
+
                     if (MidiManager.IsSustainHold && MidiManager.IsSustainLocked)
                     {
-                        lblPedal.Text = $"PEDAL SUSTAIN E FIXO ({(MidiManager.SustainLockMode == 1 ? "CONT." : "INTEL.")})";
+                        lblPedal.Text = L.T($"SUSTAIN PEDAL AND LOCK ({(continuous ? "CONT." : "SMART")})", $"PEDAL SUSTAIN E FIXO ({(continuous ? "CONT." : "INTEL.")})");
                         lblPedal.ForeColor = Color.DarkRed;
                     }
                     else if (MidiManager.IsSustainHold)
                     {
-                        lblPedal.Text = "PEDAL SUSTAIN";
+                        lblPedal.Text = L.T("SUSTAIN PEDAL", "PEDAL SUSTAIN");
                         lblPedal.ForeColor = Color.DarkRed;
                     }
                     else if (MidiManager.IsSustainLocked)
                     {
-                        lblPedal.Text = $"PEDAL FIXO ({(MidiManager.SustainLockMode == 1 ? "CONTÍNUO" : "INTELIGENTE")})";
+                        lblPedal.Text = L.T($"PEDAL LOCK ({(continuous ? "CONTINUOUS" : "SMART")})", $"PEDAL FIXO ({(continuous ? "CONTÍNUO" : "INTELIGENTE")})");
                         lblPedal.ForeColor = Color.DarkGoldenrod;
                     }
                     else
                     {
-                        lblPedal.Text = "PEDAL LIVRE";
+                        lblPedal.Text = L.T("PEDAL FREE", "PEDAL LIVRE");
                         lblPedal.ForeColor = Color.LightGray;
                     }
                 }
+
+                UpdateLive();
             }
             catch { }
         }
 
+        // The arranger and song lines follow the music (chord, bar), so a timer refreshes them
+        private static void UpdateLive()
+        {
+            if (_lblArranger == null || _lblSong == null) return;
+
+            _lblArranger.Text = MidiManager.ArrangerStatus();
+            _lblArranger.ForeColor = MidiManager.IsArrangerOn ? Color.DarkGreen : Color.DimGray;
+            _lblSong.Text = MidiManager.SongStatus();
+        }
+
         private static void UpdateStatus(string text)
         {
-            var form = Wf.Get<Form>("_Form");
-            if (form != null && form.Controls.ContainsKey("lblStatus"))
-                form.Invoke((MethodInvoker)(() => Wf.Set("lblStatus", text)));
+            if (_lblStatus != null) _lblStatus.Text = text;
         }
 
         public static void ConfigureWindow(Form f)
         {
+            _form = f;
             f.WindowState = FormWindowState.Maximized;
             f.KeyPreview = true;
 
@@ -576,13 +681,17 @@ namespace piano
 
                 try { SendKeys.SendWait("%"); SendKeys.SendWait("{ESC}"); } catch { }
 
-                await Task.Delay(100); // Dar tempo para o Windows processar a tecla antes de falar
+                await Task.Delay(100); // Give Windows time to process the key before speaking
 
                 if (_firstLoad)
                 {
-                    Sp.Speak($"Piano Virtual v{Constantes.versao} janela. Bem-vindo ao piano virtual. Utilize o menu ajuda para conhecer os atalhos de teclado.");
+                    Sp.Speak(L.T(
+                        $"Virtual Piano v{Constants.Version} window. Welcome to the virtual piano. Use the help menu to learn the keyboard shortcuts.",
+                        $"Piano Virtual v{Constants.Version} janela. Bem-vindo ao piano virtual. Utilize o menu ajuda para conhecer os atalhos de teclado."));
                     _firstLoad = false;
                 }
+
+                if (await Updater.InstallIfAvailableAsync()) Application.Exit();
             };
 
             f.KeyDown += (s, e) => {
@@ -591,6 +700,20 @@ namespace piano
 
             f.KeyUp += (s, e) => {
                 if (_isPianoScreen) MidiManager.OnKeyUp(s, e);
+            };
+
+            f.Deactivate += (s, e) => MidiManager.ReleaseAllKeys();
+
+            var timer = new System.Windows.Forms.Timer { Interval = 100 };
+            timer.Tick += (s, e) => {
+                MidiManager.Poll();
+                if (_isPianoScreen) UpdateLive();
+            };
+            timer.Start();
+
+            f.FormClosed += (s, e) => {
+                timer.Dispose();
+                MidiManager.Shutdown();
             };
         }
 
@@ -604,6 +727,11 @@ namespace piano
             int inIdx = ParseId(Wf.Get<string>("cb_in"));
             Config.MidiInputId = inIdx;
             Config.RecordingPath = _tempRecPath;
+
+            int language = Wf.Get<ComboBox>("cb_lang")?.SelectedIndex ?? 0;
+            Config.Language = LanguageCodes[Math.Clamp(language, 0, LanguageCodes.Length - 1)];
+            L.Init(Config.Language);
+
             Config.Save();
             MidiManager.ConfigureInput(inIdx);
         }

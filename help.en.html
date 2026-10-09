@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #483D8B; border-bottom: 2px solid #483D8B; padding-bottom: 10px; }
+        h2 { color: #2F4F4F; margin-top: 20px; background-color: #e8e8e8; padding: 5px; border-radius: 4px; }
+        .key {
+            background-color: #333;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        ul { list-style-type: none; padding: 0; }
+        li { margin-bottom: 8px; }
+        strong { color: #000; }
+        pre { background-color: #fff; border: 1px solid #ccc; padding: 10px; font-family: 'Consolas', monospace; }
+        .tip {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffa502;
+            padding: 10px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Virtual Piano - Guide</h1>
+
+    <h2>How to Play</h2>
+    <p>Your computer keyboard works like the keys of a piano:</p>
+    <ul>
+        <li><strong>Low (left):</strong> <span class="key">Z</span> <span class="key">X</span> <span class="key">C</span> <span class="key">V</span> <span class="key">B</span> <span class="key">N</span> <span class="key">M</span></li>
+        <li><strong>Middle (right):</strong> <span class="key">Q</span> <span class="key">W</span> <span class="key">E</span> <span class="key">R</span> <span class="key">T</span> <span class="key">Y</span> <span class="key">U</span></li>
+        <li><strong>Black keys:</strong> <span class="key">S</span> <span class="key">D</span> ... <span class="key">2</span> <span class="key">3</span> <span class="key">4</span></li>
+    </ul>
+    <p>A MIDI keyboard connected to the computer (Menu, Settings) gets the same features: layer, pedal, arranger and track recording.</p>
+
+    <h2>Instruments and Layers (Dual Voice)</h2>
+    <ul>
+        <li><span class="key">◄ / ► arrows</span> : <strong>Change the Main Instrument</strong></li>
+        <li><span class="key">▲ / ▼ arrows</span> : <strong>Change Octave</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">▲ / ▼ arrows</span> : <strong>Change Note Velocity</strong></li>
+        <li><span class="key">F10</span> : <strong>Turn the Second Layer On/Off</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">◄ / ► arrows</span> : <strong>Change the Layer Instrument</strong></li>
+    </ul>
+
+    <h2>Audio Controls</h2>
+    <ul>
+        <li><span class="key">Space</span> : <strong>Sustain Pedal</strong> (hold it to let notes ring)</li>
+        <li><span class="key">Shift</span> + <span class="key">Space</span> : <strong>Pedal Lock</strong> (off, continuous, smart)</li>
+        <li><span class="key">F1</span> / <span class="key">F2</span> : Transpose (change key)</li>
+        <li><span class="key">F3</span> / <span class="key">F4</span> : Reverb</li>
+        <li><span class="key">F5</span> : <strong>Metronome</strong> (set the BPM)</li>
+        <li><span class="key">F6</span> / <span class="key">F7</span> : Chorus</li>
+        <li><span class="key">F8</span> / <span class="key">F9</span> : Modulation</li>
+    </ul>
+
+    <h2>Favorites</h2>
+    <p>Save your favorite sounds to switch quickly:</p>
+    <ul>
+        <li><strong>Save:</strong> <span class="key">Ctrl</span> + <span class="key">0-9</span></li>
+        <li><strong>Load:</strong> <span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">0-9</span></li>
+    </ul>
+
+    <h2>Arranger (Automatic Accompaniment)</h2>
+    <p>While the arranger is on, the keys below the split point (C4 at first, which is the row from <span class="key">Z</span> to <span class="key">M</span>) stop sounding and choose the chord instead. Drums, bass and harmony play by themselves in the selected style, and the rest of the keyboard is free for the melody. The chord stays after you release the keys.</p>
+    <ul>
+        <li><span class="key">F11</span> : <strong>Start / Stop the arranger</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">F11</span> : <strong>Start with an intro</strong>, or finish with an <strong>ending</strong> if it is already playing</li>
+        <li><span class="key">F12</span> : <strong>Fill-in</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">F12</span> : <strong>Switch variation A/B</strong> (with a fill-in)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">◄ / ► arrows</span> : <strong>Change style</strong> (while playing, it changes on the next bar)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">▲ / ▼ arrows</span> : <strong>Tempo</strong> in steps of 5 (with <span class="key">Shift</span>, steps of 1)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">PageUp</span> / <span class="key">PageDown</span> : <strong>Accompaniment volume</strong></li>
+        <li><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">◄ / ► arrows</span> : <strong>Split point</strong></li>
+    </ul>
+    <p><strong>Chords:</strong> a single key plays the major chord; <span class="key">Shift</span> + the key plays the <strong>minor</strong> chord; root plus minor third plays the minor chord; root plus seventh plays the seventh chord. With three or more keys the program recognizes major, minor, seventh, diminished, augmented, sus and sixth chords, in any inversion.</p>
+
+    <h2>Record a Style by Playing</h2>
+    <p>In the Arranger menu choose <strong>Record a New Style by Playing</strong> (starts from nothing) or <strong>Re-record Parts of the Current Style</strong> (starts from an existing style). You record one part at a time, always playing in <strong>C major</strong>; afterwards the arranger moves everything to whatever chord you play.</p>
+    <p>The parts are: Drums, Bass, Chords and Pad of variation A, the same four of variation B, and the Fill-in. Whatever is left empty in variation B and in the fill-in uses variation A.</p>
+    <ul>
+        <li><span class="key">Ctrl</span> + <span class="key">T</span> : <strong>Next part</strong> (with <span class="key">Shift</span>, the previous one)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">R</span> : <strong>Record</strong>. There is a one-bar count-in; play, then press it again to stop. It records up to 4 bars.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">P</span> or <span class="key">F11</span> : <strong>Listen</strong> to the style as it is</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">P</span> : <strong>Listen to the selected part only</strong> (just the bass, for instance)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">L</span> : <strong>Listen to the last recording only</strong>: just what you have just recorded (the snare, for instance), without what was already there</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Z</span> : <strong>Undo the last recording</strong>. Got the snare wrong? Only that take goes away; the hi-hat and cymbal recorded before it stay. Press it again to go back one more recording.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Delete</span> : <strong>Erase</strong> the selected part</li>
+        <li><span class="key">Ctrl</span> + <span class="key">▲ / ▼ arrows</span> : <strong>Tempo</strong> of the style</li>
+        <li><span class="key">Ctrl</span> + <span class="key">S</span> : <strong>Save</strong> the style and leave</li>
+        <li><span class="key">Esc</span> : <strong>Leave without saving</strong></li>
+    </ul>
+    <p>While the recorder is open, the <strong>Style Recorder</strong> menu has the same commands, plus <strong>Erase Everything and Start Over</strong>.</p>
+    <ul>
+        <li><strong>Drums and Fill-in:</strong> the keys become the drum kit: <span class="key">Z</span> kick, <span class="key">S</span> rim, <span class="key">X</span> snare, <span class="key">D</span> clap, <span class="key">G</span> closed hi-hat, <span class="key">H</span> pedal hi-hat, <span class="key">J</span> open hi-hat, <span class="key">V</span> <span class="key">B</span> <span class="key">N</span> <span class="key">M</span> <span class="key">,</span> <span class="key">.</span> toms, <span class="key">L</span> crash, <span class="key">;</span> ride. Every recording <u>adds</u> pieces to what is already there, so you can record kick and snare first and the hi-hat afterwards.</li>
+        <li><strong>Bass:</strong> play one note at a time. C is the root, E the third, G the fifth, A or B flat the seventh/sixth, and the upper C the octave.</li>
+        <li><strong>Chords and Pad:</strong> two or more keys together count as the whole chord. A single key becomes an arpeggio: C, E and G are the first, second and third notes of the chord.</li>
+        <li>The instrument of the part is the one selected when you record it, and what you play is snapped to the time grid of the style.</li>
+    </ul>
+
+    <h2>Edit Styles as Text</h2>
+    <p>Every style is a text file, including the ones you record by playing. In the Arranger menu choose <strong>Edit a Copy of the Current Style as Text</strong>: the program copies the selected style to the folder Documents, Piano Virtual, Styles and opens the copy in Notepad, with the instructions at the top of the file. Edit it, save, then choose <strong>Reload Styles</strong>.</p>
+    <p>Every pattern has one character per step. With 4 steps per beat, a 4/4 bar has 16 characters:</p>
+    <pre>[drums]
+kick  = x... .... x.x. ....
+snare = .... x... .... x...
+hat   = x.x. x.x. x.x. x.x.
+
+[bass]
+program = 33
+a = 1--- --1. ..1- 5-3.</pre>
+    <ul>
+        <li><strong>Drums:</strong> <span class="key">.</span> silence, <span class="key">x</span> hit, <span class="key">X</span> accent, <span class="key">o</span> soft hit</li>
+        <li><strong>Bass:</strong> <span class="key">1</span> root, <span class="key">3</span> third, <span class="key">5</span> fifth, <span class="key">7</span> seventh or sixth, <span class="key">8</span> octave</li>
+        <li><strong>Chords:</strong> <span class="key">x</span> whole chord, <span class="key">1</span> to <span class="key">4</span> single notes (arpeggio)</li>
+        <li><span class="key">-</span> keeps the previous note sounding</li>
+    </ul>
+
+    <h2>Song (Track Recording)</h2>
+    <p>Record up to 6 tracks, one at a time, each with its own instrument. While you record a track, the others play. If the arranger is on during the recording, the accompaniment is recorded too, on a track of its own.</p>
+    <ul>
+        <li><span class="key">Ctrl</span> + <span class="key">R</span> : <strong>Record / stop recording</strong> on the selected track (there is a one-bar count-in)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">P</span> : <strong>Play / Stop</strong></li>
+        <li><span class="key">Ctrl</span> + <span class="key">T</span> : <strong>Next track</strong> (with <span class="key">Shift</span>, the previous one)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">M</span> : <strong>Mute / unmute</strong> the selected track</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Q</span> : <strong>Quantize</strong> the selected track: snaps the notes to the time grid (eighth, sixteenth, triplet). The strength sets how far: 100% lands on the grid, 50% only moves half way. Song, Undo Quantize brings back what you played.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">N</span> / <span class="key">O</span> / <span class="key">S</span> : <strong>New song / Open / Save</strong> as a MIDI file</li>
+    </ul>
+    <p>Recording again on a track replaces what was on it. To record the accompaniment again, select the accompaniment track and use Song, Clear Track.</p>
+
+    <div class="tip">
+        <strong>Recording tip:</strong> The metronome is heard on your sound device, but it does <u>not</u> go into the recorded audio file.
+    </div>
+</body>
+</html>
