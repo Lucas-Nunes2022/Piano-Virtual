@@ -126,8 +126,8 @@ namespace piano
             {
                 (L.T("&Start / Stop\tF11", "&Ligar / Desligar\tF11"), () => MidiManager.ToggleArranger(false)),
                 (L.T("Start with &Intro / Ending\tShift+F11", "Ligar com &Introdução / Finalização\tShift+F11"), () => MidiManager.ToggleArranger(true)),
-                (L.T("&Fill-in\tF12", "&Virada\tF12"), () => MidiManager.ArrangerFill(false)),
-                (L.T("Switch &Variation A/B\tShift+F12", "Trocar V&ariação A/B\tShift+F12"), () => MidiManager.ArrangerFill(true)),
+                (L.T("&Fill-in\tF or F12", "&Virada\tF ou F12"), () => MidiManager.ArrangerFill(false)),
+                (L.T("Switch &Variation A/B\tA or Shift+F12", "Trocar V&ariação A/B\tA ou Shift+F12"), () => MidiManager.ArrangerFill(true)),
                 ("-", () => { }),
                 (L.T("&Next Style\tCtrl+Right", "&Próximo Estilo\tCtrl+Direita"), () => MidiManager.ChangeStyle(1)),
                 (L.T("&Previous Style\tCtrl+Left", "Estilo A&nterior\tCtrl+Esquerda"), () => MidiManager.ChangeStyle(-1)),
@@ -251,8 +251,8 @@ namespace piano
                 _lblArranger = Wf.label("", "lbl_arranger", l => StyleInfoLabel(l));
                 _lblSong = Wf.label("", "lbl_song", l => StyleInfoLabel(l));
 
-                Wf.label(L.T("Space: Pedal  |  F1/F2: Transpose  |  F10: Layer  |  F11: Arranger  |  F12: Fill-in  |  Ctrl+R: Record track",
-                             "Espaço: Pedal  |  F1/F2: Transpose  |  F10: Camada  |  F11: Arranjador  |  F12: Virada  |  Ctrl+R: Gravar pista"), l => {
+                Wf.label(L.T("Space: Pedal  |  F1/F2: Transpose  |  F10: Layer  |  F11: Arranger  |  F: Fill-in  |  A: Variation A/B  |  K: Ending  |  Ctrl+R: Record track",
+                             "Espaço: Pedal  |  F1/F2: Transpose  |  F10: Camada  |  F11: Arranjador  |  F: Virada  |  A: Variação A/B  |  K: Finalização  |  Ctrl+R: Gravar pista"), l => {
                     l.ForeColor = Color.DimGray;
                     l.TextAlign = ContentAlignment.MiddleCenter;
                     l.Dock = DockStyle.Bottom;

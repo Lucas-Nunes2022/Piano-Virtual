@@ -168,7 +168,8 @@ namespace piano
 
         public void Start(bool withIntro) => engine.Post(() => DoStart(withIntro));
         public void Stop() => engine.Post(StopNow);
-        public void End() => engine.Post(() => { if (Playing) endRequested = true; });
+        // asked again once the ending has begun, a style with two beats to the bar would end twice
+        public void End() => engine.Post(() => { if (Playing && section != Section.Ending && section != Section.Final) endRequested = true; });
         public void Fill(bool switchVariation) => engine.Post(() => DoFill(switchVariation));
         public void SetStyle(Style next) => engine.Post(() => { if (Playing) pendingStyle = next; else style = next; });
         public void SetVolume(int value) => engine.Post(() => { volume = value; if (Playing) SendVolume(); });

@@ -325,6 +325,8 @@ namespace piano
             if (e.KeyCode == Keys.F11) { ToggleArranger(e.Shift); return; }
             if (e.KeyCode == Keys.F12) { ArrangerFill(e.Shift); return; }
 
+            if (HandleArrangerKey(e.KeyCode)) return;
+
             if (!KeyMap.TryGetValue(e.KeyCode, out int noteOffset) || activeNotes.ContainsKey(e.KeyCode)) return;
 
             // for a drum part the keys are the GM drum kit, whatever the octave: Z kick, X snare, G hi-hat...
@@ -342,6 +344,8 @@ namespace piano
                 return;
             }
 
+            heldArrangerKeys.Remove(e.KeyCode);
+
             if (activeNotes.TryGetValue(e.KeyCode, out int actualNote))
             {
                 activeNotes.Remove(e.KeyCode);
@@ -354,6 +358,7 @@ namespace piano
         public static void ReleaseAllKeys()
         {
             activeNotes.Clear();
+            heldArrangerKeys.Clear();
             engine?.ReleaseAllKeys();
             SetSustainHold(false);
         }

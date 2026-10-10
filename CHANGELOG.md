@@ -3,6 +3,27 @@
 Each version is described in English and then in Portuguese. The section of a version becomes
 the text of its GitHub release.
 
+## 1.6.1
+
+### English
+
+- **Arranger shortcuts under your hands.** While the arranger is playing, the three keys of the
+  middle row that play no note control it, so a fill-in no longer takes a hand off the keys:
+  F plays a fill-in, A switches between variations A and B (with a fill-in) and K finishes
+  with the ending. They work with or without Shift, which may be down for a minor chord.
+  F12, Shift+F12 and Shift+F11 still work.
+- Asking for the ending twice no longer plays it twice in styles with two beats to the bar.
+
+### Português
+
+- **Atalhos do arranjador debaixo das mãos.** Com o arranjador tocando, as três teclas da
+  fileira do meio que não tocam nota passam a comandá-lo, e a virada não tira mais a mão das
+  teclas: F faz a virada, A troca entre as variações A e B (com virada) e K encerra com a
+  finalização. Funcionam com ou sem Shift, que pode estar apertado por causa de um acorde
+  menor. F12, Shift+F12 e Shift+F11 continuam funcionando.
+- Pedir a finalização duas vezes não toca mais o final duas vezes em estilos de dois tempos
+  por compasso.
+
 ## 1.6
 
 ### English

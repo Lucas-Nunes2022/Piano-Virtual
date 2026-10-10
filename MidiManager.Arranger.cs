@@ -128,6 +128,28 @@ namespace piano
             }
         }
 
+        // A, F and K are the keys of the middle row that play no note. While the arranger plays
+        // they are its buttons, so a fill-in does not take a hand off the keys. Shift changes
+        // nothing here: it may be down for a minor chord.
+        private static readonly HashSet<Keys> heldArrangerKeys = new();
+
+        private static bool HandleArrangerKey(Keys key)
+        {
+            if (key != Keys.A && key != Keys.F && key != Keys.K) return false;
+            if (engine == null || !engine.Arranger.Playing || IsStyleRecorderOpen) return false;
+
+            // a key held down repeats, and the repeats would switch the variation back and forth
+            if (!heldArrangerKeys.Add(key)) return true;
+
+            switch (key)
+            {
+                case Keys.F: ArrangerFill(false); break;
+                case Keys.A: ArrangerFill(true); break;
+                default: engine.Arranger.End(); Announce(L.T("Ending", "Finalização")); break;
+            }
+            return true;
+        }
+
         public static void ChangeStyle(int delta)
         {
             var all = Styles.All;
