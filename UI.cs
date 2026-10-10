@@ -81,6 +81,7 @@ namespace piano
         private static string RecordText => L.T("&Record Performance...", "&Gravar Performance...");
         private static string StopRecordText => L.T("Stop Recording", "Parar Gravação");
         private static string CancelRecordText => L.T("&Cancel Recording", "&Cancelar Gravação");
+        private static string QuantizeText => L.T("&Quantize Recordings to", "&Quantizar Gravações em");
 
         private static void ClearFormControls(Form form)
         {
@@ -191,11 +192,16 @@ namespace piano
             {
                 menus.Insert(1, (L.T("Style Re&corder", "Gravador de &Estilos"), new (string, Action)[] {
                     (L.T("&Record / Stop Recording this Part\tCtrl+R", "&Gravar / Parar Gravação desta Parte\tCtrl+R"), MidiManager.ToggleStyleRecording),
+                    // a submenu with the figures, filled in below; Ctrl+Q goes to the next one
+                    (QuantizeText + "\tCtrl+Q", () => { }),
                     (L.T("&Listen / Stop\tCtrl+P", "&Ouvir / Parar\tCtrl+P"), () => MidiManager.ToggleStylePreview()),
                     (L.T("Listen to this Part &Only / Stop\tCtrl+Shift+P", "Ouvir &Só esta Parte / Parar\tCtrl+Shift+P"), () => MidiManager.ToggleStylePreview(solo: true)),
                     ("-", () => { }),
                     (L.T("&Next Part\tCtrl+T", "&Próxima Parte\tCtrl+T"), () => MidiManager.SelectStyleSlot(1)),
                     (L.T("&Previous Part\tCtrl+Shift+T", "Parte &Anterior\tCtrl+Shift+T"), () => MidiManager.SelectStyleSlot(-1)),
+                    (L.T("Go Up for One &More Chord\tCtrl+Right", "Subir até um Acorde a &Mais\tCtrl+Direita"), () => MidiManager.ChangeStyleUpLimit(1)),
+                    (L.T("Go Up for One Chord &Fewer\tCtrl+Left", "Subir até um Acorde a Me&nos\tCtrl+Esquerda"), () => MidiManager.ChangeStyleUpLimit(-1)),
+                    (L.T("Se&venth and Ninth in this Part: On / Off\tCtrl+N", "Sétima &e Nona nesta Parte: Ligar / Desligar\tCtrl+N"), MidiManager.ToggleStyleTensions),
                     (L.T("Listen to the Last Recording Onl&y / Stop\tCtrl+L", "Ouvir Só a Ú&ltima Gravação / Parar\tCtrl+L"), MidiManager.ToggleLastTakePreview),
                     (L.T("&Undo Last Recording\tCtrl+Z", "&Desfazer Última Gravação\tCtrl+Z"), MidiManager.UndoStyleRecording),
                     (L.T("&Erase this Part\tCtrl+Delete", "A&pagar esta Parte\tCtrl+Delete"), MidiManager.ClearStyleSlot),
@@ -259,6 +265,7 @@ namespace piano
                 foreach (ToolStripItem top in form.MainMenuStrip.Items) SplitShortcuts(top);
                 _miRecord = FindMenuItem(RecordText);
                 _miCancelRecording = FindMenuItem(CancelRecordText);
+                if (FindMenuItem(QuantizeText) is ToolStripMenuItem quantize) FillQuantizeMenu(quantize);
             }
 
             UpdateDisplay();
@@ -288,6 +295,23 @@ namespace piano
             }
 
             foreach (ToolStripItem child in menuItem.DropDownItems) SplitShortcuts(child);
+        }
+
+        // The figures a style recording can be snapped to, with a check mark on the one in use
+        private static void FillQuantizeMenu(ToolStripMenuItem menu)
+        {
+            string[] names = MidiManager.QuantizeNames;
+            for (int i = 0; i < names.Length; i++)
+            {
+                int figure = i;
+                menu.DropDownItems.Add(new ToolStripMenuItem(names[i], null, (s, e) => MidiManager.SetStyleQuantize(figure)));
+            }
+
+            menu.DropDownOpening += (s, e) =>
+            {
+                for (int i = 0; i < menu.DropDownItems.Count; i++)
+                    ((ToolStripMenuItem)menu.DropDownItems[i]).Checked = i == MidiManager.StyleQuantize;
+            };
         }
 
         private static ToolStripItem? FindMenuItem(string text)

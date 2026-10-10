@@ -10,7 +10,9 @@ namespace piano
 
     // A small multitrack recorder: six tracks for what the player performs (main instrument plus
     // layer) and one for the accompaniment the arranger generated. The song plays on its own
-    // synthesizer, so every track keeps its instrument while the player moves on to another one.
+    // synthesizers, so every track keeps its instrument while the player moves on to another one.
+    // There are two of them: the twelve channels of the player tracks leave no room for the
+    // seven the accompaniment can use (drums and six instruments).
     //
     // Recording and playback run on the audio thread. Track contents are immutable arrays that
     // are swapped whole, which lets the UI thread read them (to save a file) without locking.
@@ -22,12 +24,15 @@ namespace piano
 
         public const int Stopped = 0, Playing = 1, Recording = 2;
 
-        // Channels of the song synthesizer used by each player track. 9 to 12 belong to the accompaniment.
+        // Channels of the song synthesizer used by each player track. The accompaniment keeps the
+        // channels of the arranger on a synthesizer to itself; in a MIDI file from elsewhere,
+        // whatever is on channels 9 to 12 is taken for it.
         private static readonly (int Main, int Layer)[] TrackChannels = { (0, 1), (2, 3), (4, 5), (6, 7), (13, 14), (8, 15) };
         private static readonly int[] ChannelTrack = { 0, 0, 1, 1, 2, 2, 3, 3, 5, 6, 6, 6, 6, 4, 4, 5 };
 
         private readonly AudioEngine engine;
         private readonly Synthesizer synth;
+        private readonly Synthesizer accompSynth;
         private readonly int[] cursor = new int[TrackCount];
         private readonly bool[] muted = new bool[TrackCount];
         private readonly HashSet<(int Channel, int Note)> openNotes = new();
@@ -39,10 +44,11 @@ namespace piano
         public volatile int State;
         public volatile int RecordingTrack = -1;
 
-        public Sequencer(AudioEngine engine, Synthesizer synth)
+        public Sequencer(AudioEngine engine, Synthesizer synth, Synthesizer accompSynth)
         {
             this.engine = engine;
             this.synth = synth;
+            this.accompSynth = accompSynth;
         }
 
         public bool Active => State != Stopped;
@@ -114,6 +120,7 @@ namespace piano
             }
 
             synth.NoteOffAll(false);
+            accompSynth.NoteOffAll(false);
             State = Stopped;
             RecordingTrack = -1;
         }
@@ -134,6 +141,12 @@ namespace piano
         {
             muted[track] = on;
             if (!on) return;
+
+            if (track == AccompTrack)
+            {
+                accompSynth.NoteOffAll(false);
+                return;
+            }
 
             for (int channel = 0; channel < ChannelTrack.Length; channel++)
                 if (ChannelTrack[channel] == track) synth.NoteOffAll(channel, false);
@@ -174,13 +187,14 @@ namespace piano
                 if (t == RecordingTrack) continue;
 
                 var events = song[t];
+                var target = t == AccompTrack ? accompSynth : synth;
                 while (cursor[t] < events.Length && events[cursor[t]].Tick <= tick)
                 {
                     var e = events[cursor[t]++];
                     int command = e.Status & 0xF0;
                     // a muted track still follows its program changes, so it can be unmuted mid-song
                     if (muted[t] && command == 0x90) continue;
-                    synth.ProcessMidiMessage(e.Status & 0x0F, command, e.Data1, e.Data2);
+                    target.ProcessMidiMessage(e.Status & 0x0F, command, e.Data1, e.Data2);
                 }
             }
 
@@ -219,11 +233,17 @@ namespace piano
             return result.OrderBy(e => e.Tick).ThenBy(Order).ToArray();
         }
 
+        // The name of the accompaniment track in a MIDI file. It tells that track apart from the
+        // player tracks: with more than three instruments the arranger is on channels they use too.
+        private const string AccompName = "Accompaniment";
+
         public static void SaveMidi(string path, SongEvent[][] song, double tempo, int beatsPerBar)
         {
             var file = new MidiEventCollection(1, AudioEngine.TicksPerBeat);
             file.AddEvent(new TempoEvent((int)Math.Round(60000000.0 / tempo), 0), 0);
             file.AddEvent(new TimeSignatureEvent(0, beatsPerBar, 2, 24, 8), 0);
+            if (song[AccompTrack].Length > 0)
+                file.AddEvent(new TextEvent(AccompName, MetaEventType.SequenceTrackName, 0), AccompTrack + 1);
 
             for (int t = 0; t < song.Length; t++)
             {
@@ -257,6 +277,9 @@ namespace piano
 
             for (int t = 0; t < file.Tracks; t++)
             {
+                bool accomp = file.Events[t].OfType<TextEvent>()
+                    .Any(name => name.MetaEventType == MetaEventType.SequenceTrackName && name.Text == AccompName);
+
                 foreach (var midi in file.Events[t])
                 {
                     if (midi is TempoEvent tempoEvent)
@@ -278,7 +301,7 @@ namespace piano
 
                     int channel = midi.Channel - 1;
                     int tick = (int)(midi.AbsoluteTime * AudioEngine.TicksPerBeat / file.DeltaTicksPerQuarterNote);
-                    song[ChannelTrack[channel]].Add(new SongEvent(tick, (byte)(command | channel), (byte)data1, (byte)data2));
+                    song[accomp ? AccompTrack : ChannelTrack[channel]].Add(new SongEvent(tick, (byte)(command | channel), (byte)data1, (byte)data2));
                 }
             }
 

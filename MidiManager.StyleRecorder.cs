@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using Speech;
 
@@ -16,13 +17,20 @@ namespace piano
         private static string draftPath = "";
         private static int draftSlot;
         private static int recordingSlot = -1;
+        private static int recordingProgram;
+        private static int styleQuantize;
 
         public static bool IsStyleRecorderOpen => draft != null;
+
+        // The figure recordings are snapped to, as a position in the list of quantize figures
+        public static int StyleQuantize => styleQuantize;
+        public static string[] QuantizeNames => QuantizeGrids.Select(grid => L.T(grid.En, grid.Pt)).ToArray();
+        private static string QuantizeName(int figure) => L.T(QuantizeGrids[figure].En, QuantizeGrids[figure].Pt);
 
         // The PC keys play the drum kit while a drum part is selected
         private static bool DrumKeys => draft != null && StyleDraft.IsDrumSlot(draftSlot);
 
-        // fromCurrent: start from a copy of the selected style and replace only some parts
+        // fromCurrent: start from a copy of the selected style, to add to it or redo some of its parts
         public static void OpenStyleRecorder(bool fromCurrent)
         {
             if (engine == null || draft != null) return;
@@ -58,12 +66,16 @@ namespace piano
             draftPath = inPlace ? CurrentStyle.FilePath : StylePath(name);
             draftSlot = 0;
             recordingSlot = -1;
+            // recordings start on the grid of the style: triplets for swing, sixteenth notes for most
+            styleQuantize = Array.FindIndex(QuantizeGrids, grid => grid.Ticks * draft.StepsPerBeat == AudioEngine.TicksPerBeat);
+            if (styleQuantize < 0) styleQuantize = Array.FindIndex(QuantizeGrids, grid => grid.Ticks * 4 == AudioEngine.TicksPerBeat);
+            draft.Quantize = AudioEngine.TicksPerBeat / QuantizeGrids[styleQuantize].Ticks;
             engine.SetDrumKeys(true);
 
             UI.RebuildMain();
             Sp.Speak(L.T(
-                $"Style recorder, {name}. {draft.DescribeSlot(0)}. The keys now play the drum kit. Control R records, Control T goes to the next part, Control P listens, Control S saves, Escape cancels.",
-                $"Gravador de estilos, {name}. {draft.DescribeSlot(0)}. As teclas agora tocam a bateria. Control R grava, Control T vai para a próxima parte, Control P ouve, Control S salva, Escape cancela."));
+                $"Style recorder, {name}. {draft.DescribeSlot(0)}. The keys now play the drum kit. Control R records, Control T goes to the next part, Control Q changes the quantization, Control P listens, Control S saves, Escape cancels.",
+                $"Gravador de estilos, {name}. {draft.DescribeSlot(0)}. As teclas agora tocam a bateria. Control R grava, Control T vai para a próxima parte, Control Q troca a quantização, Control P ouve, Control S salva, Escape cancela."));
         }
 
         private static string? PromptText(string title, string label, string initial)
@@ -97,6 +109,10 @@ namespace piano
                 case Keys.R: ToggleStyleRecording(); return true;
                 case Keys.P: ToggleStylePreview(solo: e.Shift); return true;
                 case Keys.T: SelectStyleSlot(e.Shift ? -1 : 1); return true;
+                case Keys.Q: ChangeStyleQuantize(e.Shift ? -1 : 1); return true;
+                case Keys.Right: ChangeStyleUpLimit(1); return true;
+                case Keys.Left: ChangeStyleUpLimit(-1); return true;
+                case Keys.N: ToggleStyleTensions(); return true;
                 case Keys.Delete: ClearStyleSlot(); return true;
                 case Keys.Z: UndoStyleRecording(); return true;
                 case Keys.L: ToggleLastTakePreview(); return true;
@@ -121,6 +137,52 @@ namespace piano
             Announce(draft.DescribeSlot(draftSlot));
         }
 
+        public static void ChangeStyleQuantize(int delta) =>
+            SetStyleQuantize((styleQuantize + delta + QuantizeGrids.Length) % QuantizeGrids.Length);
+
+        // Applies to the recordings made from now on; what is already recorded stays as it is
+        public static void SetStyleQuantize(int figure)
+        {
+            if (draft == null || StyleBusy) return;
+
+            styleQuantize = figure;
+            draft.Quantize = AudioEngine.TicksPerBeat / QuantizeGrids[figure].Ticks;
+            Announce(L.T("Quantize: ", "Quantização: ") + QuantizeName(figure));
+        }
+
+        // What was recorded in C goes up to reach the other chords, but only as far as this one;
+        // for the chords after it, it goes down. Set for each instrument, in both variations.
+        public static void ChangeStyleUpLimit(int delta)
+        {
+            if (draft == null || StyleBusy) return;
+
+            int up = draft.MoveUpLimit(draftSlot, delta);
+            if (up < 0)
+            {
+                Announce(L.T("Only bass, chords and pad follow the chords", "Só baixo, acordes e pad acompanham os acordes"));
+                return;
+            }
+
+            string part = StyleDraft.PartName(draftSlot);
+            string last = Chord.PitchName(up), next = Chord.PitchName(up + 1);
+            Announce(up == 11 ? L.T($"{part}: goes up on every chord", $"{part}: sobe em todos os acordes")
+                   : up == 0 ? L.T($"{part}: goes down on every chord", $"{part}: desce em todos os acordes")
+                   : L.T($"{part}: goes up as far as {last}, down from {next} on", $"{part}: sobe até {last}, desce de {next} em diante"));
+        }
+
+        // Whether the arranger completes the chords with a seventh or a ninth in what was
+        // recorded. Set for the chords and for the pad, in both variations.
+        public static void ToggleStyleTensions()
+        {
+            if (draft == null || StyleBusy) return;
+
+            bool? on = draft.ToggleTensions(draftSlot);
+            string part = StyleDraft.PartName(draftSlot);
+            Announce(on == null ? L.T("Only chords and pad get the seventh and the ninth", "Só acordes e pad ganham a sétima e a nona")
+                   : on.Value ? L.T($"{part}: seventh and ninth on", $"{part}: sétima e nona ligadas")
+                   : L.T($"{part}: seventh and ninth off, only what was recorded", $"{part}: sétima e nona desligadas, só o que foi gravado"));
+        }
+
         public static void ToggleStyleRecording()
         {
             if (engine == null || draft == null) return;
@@ -131,11 +193,19 @@ namespace piano
                 return;
             }
 
+            if (!draft.CanRecord(draftSlot, CurrentInstrument))
+            {
+                Announce(L.T($"The style already has {Styles.MaxParts} instruments. To record another one, erase a part first.",
+                             $"O estilo já tem {Styles.MaxParts} instrumentos. Para gravar outro, apague uma parte antes."));
+                return;
+            }
+
             ReleaseAllKeys();
             engine.TakeCapture();
             recordingSlot = draftSlot;
-            // drums are layered over what is there; an instrument part is replaced, so it is left out
-            engine.BeginCapture(draft.Backing(draftSlot, withoutSlot: true), StyleDraft.MaxBars);
+            recordingProgram = CurrentInstrument;
+            // every recording adds to what is there, so all of it plays along
+            engine.BeginCapture(draft.Backing(draftSlot, recording: true, recordingProgram), StyleDraft.MaxBarsOf(draftSlot));
             Announce(L.T($"Recording {StyleDraft.SlotName(draftSlot)}", $"Gravando {StyleDraft.SlotName(draftSlot)}"));
         }
 
@@ -145,7 +215,7 @@ namespace piano
             if (engine == null || draft == null || StyleBusy) return;
 
             if (engine.Arranger.Playing) engine.Arranger.Stop();
-            else engine.Arranger.PlayPreview(solo ? draft.Solo(draftSlot) : draft.Backing(draftSlot, withoutSlot: false));
+            else engine.Arranger.PlayPreview(solo ? draft.Solo(draftSlot) : draft.Backing(draftSlot, recording: false));
         }
 
         // Plays only what the last recording added: the snare just played, without the hi-hat from before
@@ -254,7 +324,7 @@ namespace piano
             UI.RebuildMain();
         }
 
-        // A recording ends when the player stops it or after StyleDraft.MaxBars bars
+        // A recording ends when the player stops it or after as many bars as the part can have
         private static void PollStyleRecorder()
         {
             if (engine == null || draft == null || recordingSlot < 0) return;
@@ -265,11 +335,14 @@ namespace piano
             int slot = recordingSlot;
             recordingSlot = -1;
 
-            int bars = draft.Apply(slot, notes, engine.CaptureEnd, CurrentInstrument);
+            int bars = draft.Apply(slot, notes, engine.CaptureEnd, recordingProgram);
             string name = StyleDraft.SlotName(slot);
-            Announce(bars == 0 ? L.T($"{name}: nothing recorded", $"{name}: nada gravado")
-                   : bars == 1 ? L.T($"{name}: 1 bar recorded", $"{name}: 1 compasso gravado")
-                   : L.T($"{name}: {bars} bars recorded", $"{name}: {bars} compassos gravados"));
+            // an instrument part says what it has now: the one just played and those from before
+            string instruments = bars > 0 ? draft.InstrumentNames(slot) : "";
+            Announce((bars == 0 ? L.T($"{name}: nothing recorded", $"{name}: nada gravado")
+                    : bars == 1 ? L.T($"{name}: 1 bar recorded", $"{name}: 1 compasso gravado")
+                    : L.T($"{name}: {bars} bars recorded", $"{name}: {bars} compassos gravados"))
+                    + (instruments.Length > 0 ? ". " + instruments : ""));
         }
 
         public static string StyleRecorderStatus()
@@ -278,8 +351,9 @@ namespace piano
 
             string state = StyleBusy ? L.T("RECORDING", "GRAVANDO") : draft.DescribeSlot(draftSlot);
             return $"{L.T("STYLE RECORDER", "GRAVADOR DE ESTILOS")}: {draft.Name}  |  {(StyleBusy ? StyleDraft.SlotName(draftSlot) + ", " : "")}{state}  |  "
-                 + L.T("Ctrl+R record, Ctrl+T next part, Ctrl+P listen, Ctrl+Shift+P this part only, Ctrl+L last recording only, Ctrl+Z undo last recording, Ctrl+Del erase, Ctrl+S save, Esc cancel",
-                       "Ctrl+R grava, Ctrl+T próxima parte, Ctrl+P ouve, Ctrl+Shift+P só esta parte, Ctrl+L só a última gravação, Ctrl+Z desfaz a última gravação, Ctrl+Del apaga, Ctrl+S salva, Esc cancela");
+                 + $"{L.T("Quantize", "Quantização")}: {QuantizeName(styleQuantize)}  |  "
+                 + L.T("Ctrl+R record, Ctrl+T next part, Ctrl+Q quantize, Ctrl+P listen, Ctrl+Shift+P this part only, Ctrl+L last recording only, Ctrl+Z undo last recording, Ctrl+Del erase, Ctrl+S save, Esc cancel",
+                       "Ctrl+R grava, Ctrl+T próxima parte, Ctrl+Q quantização, Ctrl+P ouve, Ctrl+Shift+P só esta parte, Ctrl+L só a última gravação, Ctrl+Z desfaz a última gravação, Ctrl+Del apaga, Ctrl+S salva, Esc cancela");
         }
     }
 }

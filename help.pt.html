@@ -47,11 +47,11 @@
 
     <h2>Instrumentos e Camadas (Dual Voice)</h2>
     <ul>
-        <li><span class="key">Setas ◄ / ►</span> : <strong>Trocar Instrumento Principal</strong></li>
-        <li><span class="key">Setas ▲ / ▼</span> : <strong>Mudar Oitava</strong></li>
-        <li><span class="key">Shift</span> + <span class="key">Setas ▲ / ▼</span> : <strong>Mudar Força da Nota (Velocity)</strong></li>
+        <li><span class="key">Setas Esquerda / Direita</span> : <strong>Trocar Instrumento Principal</strong></li>
+        <li><span class="key">Setas Cima / Baixo</span> : <strong>Mudar Oitava</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">Setas Cima / Baixo</span> : <strong>Mudar Força da Nota (Velocity)</strong></li>
         <li><span class="key">F10</span> : <strong>Ligar/Desligar Camada Secundária</strong></li>
-        <li><span class="key">Shift</span> + <span class="key">Setas ◄ / ►</span> : <strong>Trocar Instrumento da Camada</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">Setas Esquerda / Direita</span> : <strong>Trocar Instrumento da Camada</strong></li>
     </ul>
 
     <h2>Controles de Áudio</h2>
@@ -79,34 +79,41 @@
         <li><span class="key">Shift</span> + <span class="key">F11</span> : <strong>Ligar com introdução</strong>, ou encerrar com <strong>finalização</strong> se já estiver tocando</li>
         <li><span class="key">F12</span> : <strong>Virada</strong></li>
         <li><span class="key">Shift</span> + <span class="key">F12</span> : <strong>Trocar variação A/B</strong> (com virada)</li>
-        <li><span class="key">Ctrl</span> + <span class="key">Setas ◄ / ►</span> : <strong>Trocar estilo</strong> (tocando, a troca acontece no próximo compasso)</li>
-        <li><span class="key">Ctrl</span> + <span class="key">Setas ▲ / ▼</span> : <strong>Andamento</strong> de 5 em 5 (com <span class="key">Shift</span>, de 1 em 1)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Setas Esquerda / Direita</span> : <strong>Trocar estilo</strong> (tocando, a troca acontece no próximo compasso)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Setas Cima / Baixo</span> : <strong>Andamento</strong> de 5 em 5 (com <span class="key">Shift</span>, de 1 em 1)</li>
         <li><span class="key">Ctrl</span> + <span class="key">PageUp</span> / <span class="key">PageDown</span> : <strong>Volume do acompanhamento</strong></li>
-        <li><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Setas ◄ / ►</span> : <strong>Ponto de divisão</strong></li>
+        <li><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Setas Esquerda / Direita</span> : <strong>Ponto de divisão</strong></li>
     </ul>
-    <p><strong>Acordes:</strong> uma tecla sozinha toca o acorde maior; <span class="key">Shift</span> + a tecla toca o <strong>menor</strong>; tônica mais terça menor toca o menor; tônica mais sétima toca o acorde com sétima. Com três ou mais teclas o programa reconhece maiores, menores, sétimas, diminutos, aumentados, sus e sextas, em qualquer inversão.</p>
+    <p><strong>Acordes:</strong> uma tecla sozinha toca o acorde maior; <span class="key">Shift</span> + a tecla toca o <strong>menor</strong>; tônica mais terça menor toca o menor; tônica mais sétima toca o acorde com sétima. Com três ou mais teclas o programa reconhece maiores, menores, sétimas, nonas, diminutos, aumentados, sus e sextas, em qualquer inversão. A nona é a nota um tom acima da tônica: Dó, Mi, Sol, Si bemol e Ré formam o C9, e Dó, Ré, Mi e Sol formam o Cadd9 (nona adicionada, sem sétima). Vale também para os menores (Cm9) e com sétima maior (Cmaj9); nos acordes de nona com sétima a quinta pode ficar de fora.</p>
 
     <h2>Gravar um Estilo Tocando</h2>
     <p>No menu Arranjador, escolha <strong>Gravar um Novo Estilo Tocando</strong> (começa do zero) ou <strong>Regravar Partes do Estilo Atual</strong> (parte de um estilo pronto). Você grava uma parte de cada vez, sempre tocando em <strong>Dó maior</strong>; depois o arranjador transporta tudo para o acorde que você fizer.</p>
     <p>As partes são: Bateria, Baixo, Acordes e Pad da variação A, as mesmas quatro da variação B, e a Virada. O que ficar vazio na variação B e na virada usa o da variação A.</p>
     <ul>
         <li><span class="key">Ctrl</span> + <span class="key">T</span> : <strong>Próxima parte</strong> (com <span class="key">Shift</span>, a anterior)</li>
-        <li><span class="key">Ctrl</span> + <span class="key">R</span> : <strong>Gravar</strong>. Há um compasso de contagem; toque e aperte de novo para parar. Grava até 4 compassos.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">R</span> : <strong>Gravar</strong>. Há um compasso de contagem; toque e aperte de novo para parar. Grava até 4 compassos; a virada, 1 só.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Q</span> : <strong>Quantização</strong>: troca a figura para a qual o que você toca é ajustado: semínimas, colcheias, semicolcheias, tercinas de colcheia (suingue), tercinas de semicolcheia ou fusas (com <span class="key">Shift</span>, a anterior). Vale para as próximas gravações, então dá para gravar o bumbo em semicolcheias e o chimbal em tercinas.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Setas Esquerda / Direita</span> : <strong>Até que acorde a parte sobe</strong>. O baixo, os acordes ou o pad selecionado sobe de onde foi tocado em Dó até esse acorde, e nos acordes depois dele desce. De início é Fá sustenido (F#): sobe até F#, desce de Sol em diante. Vale para as duas variações.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">N</span> : <strong>Sétima e nona</strong>: liga ou desliga, nos acordes ou no pad selecionado, a sétima e a nona que o arranjador completa sozinho. De início fica ligado. Vale para as duas variações.</li>
         <li><span class="key">Ctrl</span> + <span class="key">P</span> ou <span class="key">F11</span> : <strong>Ouvir</strong> o estilo como está</li>
         <li><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">P</span> : <strong>Ouvir só a parte selecionada</strong> (só o baixo, por exemplo)</li>
         <li><span class="key">Ctrl</span> + <span class="key">L</span> : <strong>Ouvir só a última gravação</strong>: só o que você acabou de gravar (a caixa, por exemplo), sem o que já estava lá</li>
         <li><span class="key">Ctrl</span> + <span class="key">Z</span> : <strong>Desfazer a última gravação</strong>. Errou a caixa? Só ela sai; o chimbal e o prato gravados antes ficam. Apertando de novo, volta mais uma gravação.</li>
-        <li><span class="key">Ctrl</span> + <span class="key">Delete</span> : <strong>Apagar</strong> a parte selecionada</li>
-        <li><span class="key">Ctrl</span> + <span class="key">Setas ▲ / ▼</span> : <strong>Andamento</strong> do estilo</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Delete</span> : <strong>Apagar</strong> a parte selecionada, com todos os instrumentos dela</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Setas Cima / Baixo</span> : <strong>Andamento</strong> do estilo</li>
         <li><span class="key">Ctrl</span> + <span class="key">S</span> : <strong>Salvar</strong> o estilo e sair</li>
         <li><span class="key">Esc</span> : <strong>Sair sem salvar</strong></li>
     </ul>
-    <p>Enquanto o gravador está aberto, o menu <strong>Gravador de Estilos</strong> traz os mesmos comandos, mais <strong>Apagar Tudo e Recomeçar</strong>.</p>
+    <p>Enquanto o gravador está aberto, o menu <strong>Gravador de Estilos</strong> traz os mesmos comandos, mais <strong>Apagar Tudo e Recomeçar</strong>. Em <strong>Quantizar Gravações em</strong> você escolhe a figura direto na lista.</p>
     <ul>
         <li><strong>Bateria e Virada:</strong> as teclas viram a bateria: <span class="key">Z</span> bumbo, <span class="key">S</span> aro, <span class="key">X</span> caixa, <span class="key">D</span> palma, <span class="key">G</span> chimbal fechado, <span class="key">H</span> chimbal de pé, <span class="key">J</span> chimbal aberto, <span class="key">V</span> <span class="key">B</span> <span class="key">N</span> <span class="key">M</span> <span class="key">,</span> <span class="key">.</span> tons, <span class="key">L</span> prato de ataque, <span class="key">Ç</span> prato de condução. Cada gravação <u>soma</u> peças ao que já existe, então dá para gravar bumbo e caixa primeiro e o chimbal depois.</li>
-        <li><strong>Baixo:</strong> toque uma nota por vez. Dó é a tônica, Mi a terça, Sol a quinta, Lá ou Si bemol a sétima/sexta, e o Dó de cima a oitava.</li>
-        <li><strong>Acordes e Pad:</strong> duas ou mais teclas juntas contam como o acorde inteiro. Uma tecla sozinha vira arpejo: Dó, Mi e Sol são a primeira, segunda e terceira nota do acorde.</li>
-        <li>O instrumento da parte é o que estiver selecionado na hora da gravação, e o que você toca é ajustado para a grade de tempo do estilo.</li>
+        <li><strong>Virada:</strong> tem um compasso só, então a gravação dela para sozinha no fim do compasso. Enquanto você grava a virada, só ela toca: o metrônomo e as peças que já estão nela, sem o baixo, os acordes, o pad e a bateria da variação A.</li>
+        <li><strong>Baixo, Acordes e Pad:</strong> o que você toca fica gravado como foi tocado: as notas, a oitava, a duração de cada uma e as repetições. A gravação só mexe no tempo, ajustando as notas para a quantização escolhida.</li>
+        <li><strong>Vários instrumentos na mesma parte:</strong> no baixo, nos acordes e no pad cada gravação também <u>soma</u>, e o instrumento é o que estiver selecionado na hora de gravar. Se a parte ainda não tem esse instrumento, ele entra junto com os que já estão lá: os Acordes podem ser um piano elétrico, uma guitarra e um órgão. Se a parte já tem esse instrumento, as notas novas se juntam às dele. O estilo comporta até 6 instrumentos ao todo, fora a bateria. Ao passar pelas partes com <span class="key">Ctrl</span> + <span class="key">T</span>, o programa diz os instrumentos de cada uma. Para refazer, desfaça com <span class="key">Ctrl</span> + <span class="key">Z</span> ou apague a parte com <span class="key">Ctrl</span> + <span class="key">Delete</span> e grave de novo.</li>
+        <li>Na variação B, um instrumento que ainda não tem nada gravado nela começa do zero: enquanto você grava, o que ele toca na variação A fica em silêncio, e os outros instrumentos tocam normalmente.</li>
+        <li>Depois o arranjador leva essas notas para o acorde que você fizer: a terça, a quinta e a sétima acompanham o tipo do acorde (o Mi vira Mi bemol num acorde menor) e as outras notas só andam junto com a tônica. A parte sobe até a tônica nova (até Fá sustenido) ou desce até ela (de Sol em diante), para ficar perto de onde foi tocada; esse limite se muda com <span class="key">Ctrl</span> + <span class="key">Setas Esquerda / Direita</span>. Dentro do gravador tudo é ouvido em Dó, então a diferença só aparece depois de salvar, tocando outros acordes.</li>
+        <li><strong>Sétima e nona:</strong> nos acordes e no pad, quando você faz um acorde com sétima e a gravação não tem a sétima, o Dó mais agudo da parte toca a sétima no lugar dele: em C7, Mi, Sol e Dó viram Mi, Sol e Si bemol. Num acorde com nona, a nona entra logo acima, no mesmo ritmo: em C9, Mi, Sol, Si bemol e Ré. O baixo continua na tônica, e o que já foi gravado com sétima ou nona fica como está. Para a parte tocar só o que foi gravado, desligue com <span class="key">Ctrl</span> + <span class="key">N</span>.</li>
+        <li>O que você toca é ajustado para a figura de quantização escolhida (de início, a do estilo).</li>
     </ul>
 
     <h2>Editar Estilos como Texto</h2>
@@ -126,6 +133,13 @@ a = 1--- --1. ..1- 5-3.</pre>
         <li><strong>Acordes:</strong> <span class="key">x</span> acorde inteiro, <span class="key">1</span> a <span class="key">4</span> notas soltas (arpejo)</li>
         <li><span class="key">-</span> mantém a nota anterior soando</li>
     </ul>
+    <p>O que você grava tocando é salvo de outro jeito, com uma linha para cada nota, como soa sobre um acorde de Dó maior (o Dó central é C4). Dá para escrever assim também:</p>
+    <pre>[bass]
+program = 33
+a C2 = x--x .... .... x---
+a G1 = .... x-.x .... ....
+a C3 = .... .... x--. ....</pre>
+    <p>Nessas linhas, <span class="key">x</span> é a nota, <span class="key">X</span> a nota acentuada, <span class="key">o</span> a nota fraca e <span class="key">-</span> mantém a nota soando. Para a variação B, comece a linha com <span class="key">b</span> no lugar de <span class="key">a</span>. A linha <span class="key">up = F#</span> diz até que acorde essas notas sobem; pode ser qualquer nota de C a B. Em [chord] e [pad], a linha <span class="key">tensions = off</span> faz a parte tocar só o que está escrito, sem a sétima e a nona que o arranjador completa. Uma parte com mais de um instrumento tem uma seção para cada um: [chord], [chord 2], [chord 3]. O estilo pode ter até seis seções de instrumento.</p>
 
     <h2>Música (Gravação por Pistas)</h2>
     <p>Grave até 6 pistas, uma de cada vez, cada uma com seu instrumento. Enquanto você grava uma pista, as outras tocam. Se o arranjador estiver ligado na gravação, o acompanhamento também fica gravado, numa pista própria.</p>

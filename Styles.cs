@@ -5,11 +5,30 @@ using System.Linq;
 
 namespace piano
 {
-    public enum PartRole { Bass, Chord }
+    // Pad plays just as Chord does. It is a part of its own in the style recorder.
+    public enum PartRole { Bass, Chord, Pad }
 
     public sealed record DrumLine(int Note, string Pattern);
 
-    public sealed record Part(PartRole Role, int Program, int LowNote, int Velocity, string A, string B);
+    // One pitch of an instrument, as it sounds over a C chord, and when it plays
+    public sealed record NoteLine(int Note, string Pattern);
+
+    public sealed record Part(PartRole Role, int Program, int LowNote, int Velocity, string A, string B)
+    {
+        public const int DefaultUp = 6;
+
+        // Besides the patterns of chord degrees in A and B, the notes exactly as they were played
+        public NoteLine[] NotesA { get; init; } = Array.Empty<NoteLine>();
+        public NoteLine[] NotesB { get; init; } = Array.Empty<NoteLine>();
+
+        // The last chord root (0 = C ... 11 = B) those notes go up to from where they were played
+        // in C. For the roots after it they go down instead: up to F sharp, down from G on.
+        public int Up { get; init; } = DefaultUp;
+
+        // Chords and pad: on a chord with a seventh or a ninth that those notes do not have, the
+        // highest C among them plays the seventh instead, and the ninth is added above it
+        public bool Tensions { get; init; } = true;
+    }
 
     // An accompaniment style. Patterns are strings with one character per step, see Styles.FormatGuide.
     public sealed class Style
@@ -33,7 +52,8 @@ namespace piano
 
     public static class Styles
     {
-        public const int MaxParts = 3;
+        // One channel each, from Arranger.FirstPartChannel to the last of the sixteen
+        public const int MaxParts = 6;
         public const string FileExtension = ".style";
 
         private static readonly Dictionary<string, int> DrumNames = new(StringComparer.OrdinalIgnoreCase)
@@ -93,7 +113,7 @@ namespace piano
 # Arranger > Reload styles. Lines starting with # are comments.
 #
 # name, tempo (BPM), beats (per bar) and steps (per beat: 4 = sixteenth
-# notes, 3 = swing/triplet feel) describe the style.
+# notes, 3 = swing/triplet feel, 12 = both mixed) describe the style.
 #
 # Every pattern has one character per step. Spaces and | are ignored, so
 # use them to separate beats and bars. A pattern can be several bars long.
@@ -105,18 +125,33 @@ namespace piano
 # lowtom floortom tambourine cowbell shaker maracas claves triangle
 # mutetriangle conga lowconga agogo lowagogo woodblock, or a GM note number.
 #
-# Up to three instrument sections: [bass], [chord] and [pad]. Each one has
+# Up to six instrument sections: [bass], [chord] and [pad], and more of each
+# with a number, like [chord 2], for another instrument. Each one has
 # program (GM instrument 0-127), low (lowest MIDI note it may play),
 # velocity (1-127), a (pattern for variation A) and optionally b.
 #   . silence   - keep the previous note sounding
 #   [bass]         1 root   3 third   5 fifth   7 seventh or sixth   8 octave
 #   [chord] [pad]  x whole chord   X accented chord   1 2 3 4 single chord notes
+#
+# An instrument can also have its notes written one per line, which is how
+# the style recorder saves what you play: ""a C2 = x--- .... x-.. ...."" is
+# the note C2 in variation A (""b C2 = ..."" for variation B; middle C is C4).
+#   . silence   x note   X accent   o soft note   - keep it sounding
+# Write them as they sound over a C major chord. The arranger moves them to
+# the chord you play: the third, the fifth and the seventh follow its type.
+# up = F# says how far: up to an F sharp chord the notes go up from where they
+# were written, and from G on they go down instead. Any note from C to B.
+# In [chord] and [pad], tensions = on (the default) completes the chords with
+# a seventh or a ninth: when no note written is the seventh, the highest C
+# plays it instead, and a ninth that is not written is added above that C.
+# tensions = off plays only what is written.
 ",
 @"# Arquivo de estilo do Piano Virtual. Edite em qualquer editor de texto,
 # salve e use Arranjador > Recarregar estilos. Linhas com # são comentários.
 #
 # name (nome), tempo (BPM), beats (tempos por compasso) e steps (passos por
-# tempo: 4 = semicolcheias, 3 = suingue/tercinas) descrevem o estilo.
+# tempo: 4 = semicolcheias, 3 = suingue/tercinas, 12 = os dois misturados)
+# descrevem o estilo.
 #
 # Cada padrão tem um caractere por passo. Espaços e | são ignorados, então
 # use-os para separar tempos e compassos. Um padrão pode ter vários compassos.
@@ -128,12 +163,26 @@ namespace piano
 # lowtom floortom tambourine cowbell shaker maracas claves triangle
 # mutetriangle conga lowconga agogo lowagogo woodblock, ou um número de nota GM.
 #
-# Até três seções de instrumento: [bass], [chord] e [pad]. Cada uma tem
+# Até seis seções de instrumento: [bass], [chord] e [pad], e mais de cada uma
+# com um número, como [chord 2], para outro instrumento. Cada uma tem
 # program (instrumento GM 0-127), low (nota MIDI mais grave que pode tocar),
 # velocity (1-127), a (padrão da variação A) e, se quiser, b.
 #   . silêncio   - mantém a nota anterior soando
 #   [bass]         1 tônica   3 terça   5 quinta   7 sétima ou sexta   8 oitava
 #   [chord] [pad]  x acorde inteiro   X acorde acentuado   1 2 3 4 notas soltas do acorde
+#
+# Um instrumento também pode ter suas notas escritas uma por linha, que é
+# como o gravador de estilos salva o que você toca: ""a C2 = x--- .... x-.. ....""
+# é a nota C2 (Dó 2) na variação A (""b C2 = ..."" na variação B; o Dó central é C4).
+#   . silêncio   x nota   X acento   o nota fraca   - mantém a nota soando
+# Escreva como elas soam sobre um acorde de Dó maior. O arranjador leva as
+# notas para o acorde tocado: a terça, a quinta e a sétima seguem o tipo dele.
+# up = F# diz até onde: até o acorde de Fá sustenido as notas sobem de onde
+# foram escritas, e de Sol em diante elas descem. Vale qualquer nota de C a B.
+# Em [chord] e [pad], tensions = on (o padrão) completa os acordes com sétima
+# ou com nona: se nenhuma nota escrita é a sétima, o Dó mais agudo toca a
+# sétima no lugar dele, e a nona que não está escrita entra acima desse Dó.
+# tensions = off toca só o que está escrito.
 ");
 
         public static Style Parse(string text, string fallbackName, bool builtIn)
@@ -163,7 +212,7 @@ namespace piano
                         {
                             if (!IsPartSection(section)) throw new FormatException(L.T($"unknown section [{section}]", $"seção desconhecida [{section}]"));
                             if (parts.Count == MaxParts) throw new FormatException(L.T($"at most {MaxParts} instrument sections", $"no máximo {MaxParts} seções de instrumento"));
-                            parts.Add(new Dictionary<string, string> { { "role", section.StartsWith("bass") ? "bass" : "chord" } });
+                            parts.Add(new Dictionary<string, string> { { "role", section.StartsWith("bass") ? "bass" : section.StartsWith("pad") ? "pad" : "chord" } });
                         }
                         continue;
                     }
@@ -180,7 +229,7 @@ namespace piano
                             else if (key == "name.pt") namePt = value;
                             else if (key == "tempo") tempo = Number(value, 20, 300);
                             else if (key == "beats") beats = Number(value, 1, 12);
-                            else if (key == "steps") steps = Number(value, 2, 8);
+                            else if (key == "steps") steps = Number(value, 2, AudioEngine.TicksPerBeat);
                             else throw new FormatException(L.T($"unknown setting {key}", $"configuração desconhecida {key}"));
                             break;
                         case "drums": drumsA.Add((DrumNote(key), value)); break;
@@ -196,7 +245,7 @@ namespace piano
             }
 
             if (string.IsNullOrWhiteSpace(name)) throw new FormatException(L.T("the style has no name", "o estilo não tem nome"));
-            if (AudioEngine.TicksPerBeat % steps != 0) throw new FormatException(L.T("steps must be 2, 3, 4, 5, 6 or 8", "steps deve ser 2, 3, 4, 5, 6 ou 8"));
+            if (AudioEngine.TicksPerBeat % steps != 0) throw new FormatException(L.T("steps must be 2, 3, 4, 5, 6, 8, 12 or another divisor of 480", "steps deve ser 2, 3, 4, 5, 6, 8, 12 ou outro divisor de 480"));
             if (drumsA.Count == 0 && parts.Count == 0) throw new FormatException(L.T("the style has no patterns", "o estilo não tem padrões"));
 
             int stepsPerBar = beats * steps;
@@ -225,25 +274,89 @@ namespace piano
 
         private static Part BuildPart(Dictionary<string, string> values, int stepsPerBar)
         {
-            var role = values["role"] == "bass" ? PartRole.Bass : PartRole.Chord;
-            string where = role == PartRole.Bass ? "[bass]" : "[chord]";
+            var role = values["role"] switch { "bass" => PartRole.Bass, "pad" => PartRole.Pad, _ => PartRole.Chord };
+            string where = $"[{values["role"]}]";
             string allowed = role == PartRole.Bass ? ".-13578" : ".-xX1234";
 
-            foreach (string key in values.Keys)
+            var notesA = new List<NoteLine>();
+            var notesB = new List<NoteLine>();
+            foreach (var (key, value) in values)
             {
-                if (key is not ("role" or "program" or "low" or "velocity" or "a" or "b"))
+                if (key is "role" or "program" or "low" or "velocity" or "up" or "tensions" or "a" or "b") continue;
+
+                // "a C2 = x--- ...." is one note of variation A
+                string[] words = key.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (words.Length != 2 || words[0] is not ("a" or "b") || !TryNote(words[1], out int note))
                     throw new FormatException(L.T($"unknown setting {key} in {where}", $"configuração desconhecida {key} em {where}"));
+
+                (words[0] == "a" ? notesA : notesB).Add(new NoteLine(note, Pattern(value, ".-xXo", stepsPerBar, where, false)));
             }
 
+            // with nothing written for b, variation B plays the same as A
+            bool hasB = values.ContainsKey("b") || notesB.Count > 0;
             string a = Pattern(values.GetValueOrDefault("a", ""), allowed, stepsPerBar, where, true);
-            string b = values.TryGetValue("b", out string? rawB) ? Pattern(rawB, allowed, stepsPerBar, where, true) : a;
+            string b = hasB ? Pattern(values.GetValueOrDefault("b", ""), allowed, stepsPerBar, where, true) : a;
+            var linesA = notesA.ToArray();
+
+            int up = Part.DefaultUp;
+            if (values.TryGetValue("up", out string? rawUp) && !TryPitch(rawUp, out up))
+                throw new FormatException(L.T($"up must be a note from C to B, not {rawUp}", $"up deve ser uma nota de C a B, não {rawUp}"));
+
+            string rawTensions = values.GetValueOrDefault("tensions", "on").ToLowerInvariant();
+            if (rawTensions is not ("on" or "off"))
+                throw new FormatException(L.T($"tensions must be on or off, not {rawTensions}", $"tensions deve ser on ou off, não {rawTensions}"));
 
             return new Part(
                 role,
                 Number(values.GetValueOrDefault("program", "0"), 0, 127),
                 Number(values.GetValueOrDefault("low", role == PartRole.Bass ? "28" : "55"), 0, 108),
                 Number(values.GetValueOrDefault("velocity", "80"), 1, 127),
-                a, b);
+                a, b)
+            {
+                NotesA = linesA,
+                NotesB = hasB ? notesB.ToArray() : linesA,
+                Up = up,
+                Tensions = rawTensions == "on"
+            };
+        }
+
+        private static int Letter(char letter) =>
+            char.ToLowerInvariant(letter) switch { 'c' => 0, 'd' => 2, 'e' => 4, 'f' => 5, 'g' => 7, 'a' => 9, 'b' => 11, _ => -1 };
+
+        // C, F#, Bb, or a number from 0 (C) to 11 (B)
+        private static bool TryPitch(string text, out int pitch)
+        {
+            if (int.TryParse(text, out pitch)) return pitch >= 0 && pitch <= 11;
+
+            pitch = text.Length is 1 or 2 ? Letter(text[0]) : -1;
+            if (pitch < 0) return false;
+
+            if (text.Length == 2)
+            {
+                if (text[1] == '#') pitch++;
+                else if (text[1] is 'b' or 'B') pitch--;
+                else return false;
+            }
+
+            pitch = (pitch + 12) % 12;
+            return true;
+        }
+
+        // C2, F#3, Bb1 (middle C is C4) or a MIDI note number
+        private static bool TryNote(string text, out int note)
+        {
+            if (int.TryParse(text, out note)) return note >= 0 && note <= 127;
+
+            int pitch = Letter(text[0]);
+            if (pitch < 0) return false;
+
+            int octaveAt = 1;
+            if (text.Length > 2 && text[1] == '#') { pitch++; octaveAt = 2; }
+            else if (text.Length > 2 && text[1] == 'b') { pitch--; octaveAt = 2; }
+
+            if (!int.TryParse(text[octaveAt..], out int octave)) return false;
+            note = (octave + 1) * 12 + pitch;
+            return note >= 0 && note <= 127;
         }
 
         private static string Pattern(string raw, string allowed, int stepsPerBar, string where, bool mayBeEmpty)
@@ -620,22 +733,17 @@ velocity = 68
 a = x-.x -.x- x-.x -.x-
 ",
 @"name = Arrocha
-tempo = 120
+tempo = 135
 beats = 4
 steps = 4
 
 [drums]
-kick  = x... .... x... x...
-rim   = .... x... .... x...
-hat   = x.x. x.x. x.x. x.x.
-conga = .... ..x. .... ..x.
-
-[drums b]
-kick       = x... .... x... x...
-snare      = .... x... .... x...
-hat        = x.x. x.x. x.x. x.x.
-conga      = .... ..x. .... ..x.
-tambourine = ..x. ..x. ..x. ..x.
+kick    = X... .... X... X...
+40      = .... X... .... ....
+hat     = x.xx x.x. x.x. x...
+openhat = .... .... .... ..x.
+60      = .... X.X. X... ....
+conga   = .... .... .... X.X.
 
 [fill]
 kick    = x... .... x... ....
@@ -644,23 +752,34 @@ hightom = .... .... .... xx..
 lowtom  = .... .... .... ..xX
 
 [bass]
-program = 33
+program = 34
 low = 28
-velocity = 100
-a = 1--- --3- ---- 5---
-b = 1--- --3- ---- 5--- | 1--- --5- ---- 3---
+velocity = 101
+up = F#
+a C2 = X--- -.X. .... .... | X--- -.X- .... .... | X--- ..X- .... .... | X--- ..X- .... ....
+a E2 = .... .... X--- .... | .... .... .... ....
+a G2 = .... .... .... X--. | .... .... X--. X---
 
 [chord]
-program = 4
+program = 25
 low = 55
-velocity = 68
-a = ..x. ..x. ..x. ..x.
+velocity = 101
+up = F#
+tensions = on
+a E4 = ..X- -.X. ..X. ..X. | ..X- ..X. ..X. ..X. | ..X- ..X. ..X- ..X- | ..X- -.X. ..X- ..X.
+a G4 = ..X- ..X. ..X. ..X. | ..X- ..X. ..X. ..X. | ..X- -.X. ..X- ..X- | ..X- ..X- ..X- ..X.
+a C5 = ..X- -.X. ..X. ..X. | ..X- ..X. ..X. ..X. | ..X- -.X. ..X- ..X- | ..X- -.X- ..X- ..X.
 
 [pad]
-program = 50
+program = 48
 low = 55
-velocity = 55
-a = x--- ---- ---- ----
+velocity = 101
+up = F#
+tensions = on
+a C2 = X--- ---- ---- ---- | ---- ---- ---- ---- | ---- ---- ---- ---- | ---- ---- ---- ----
+a G3 = X--- ---- ---- ---- | ---- ---- ---- ---- | ---- ---- ---- ---- | ---- ---- ---- ----
+a C4 = X--- ---- ---- ---- | ---- ---- ---- ---- | ---- ---- ---- ---- | ---- ---- ---- ----
+a E4 = X--- ---- ---- ---- | ---- ---- ---- ---- | ---- ---- ---- ---- | ---- ---- ---- ----
 ",
 @"name = Swing
 name.pt = Suingue

@@ -23,7 +23,7 @@ namespace piano
 
     public sealed class AudioEngine : ISampleProvider, IDisposable
     {
-        public const int SampleRate = 44100;
+        public const int DefaultSampleRate = 44100;
         public const int TicksPerBeat = 480;
         public const int MainChannel = 0;
         public const int LayerChannel = 1;
@@ -32,6 +32,7 @@ namespace piano
 
         private readonly Synthesizer live;
         private readonly Synthesizer songSynth;
+        private readonly Synthesizer accompSynth;
         private readonly Synthesizer clickSynth;
         private readonly ConcurrentQueue<(long Time, Action Run)> inbox = new();
         private float[][] buffers = NewBuffers(2048);
@@ -74,17 +75,26 @@ namespace piano
         private readonly object recordLock = new();
         private WaveFileWriter? recorder;
 
-        public AudioEngine(string soundFontPath)
+        public AudioEngine(string soundFontPath, int sampleRate = DefaultSampleRate)
         {
+            SampleRate = sampleRate;
+            WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2);
+
             var font = new SoundFont(soundFontPath);
+            SynthFixes.AddDrumExclusiveClasses(font);
+
             live = new Synthesizer(font, SampleRate);
             songSynth = new Synthesizer(font, SampleRate);
+            accompSynth = new Synthesizer(font, SampleRate);
             clickSynth = new Synthesizer(font, new SynthesizerSettings(SampleRate) { EnableReverbAndChorus = false });
+            SynthFixes.KeepReverbOnSoftNotes(live);
+            SynthFixes.KeepReverbOnSoftNotes(songSynth);
+            SynthFixes.KeepReverbOnSoftNotes(accompSynth);
 
             live.ProcessMidiMessage(9, 0xB0, 10, 64); // Center pan for drums
 
             Arranger = new Arranger(this);
-            Sequencer = new Sequencer(this, songSynth);
+            Sequencer = new Sequencer(this, songSynth, accompSynth);
 
             highClick = LoadClick("1.wav");
             lowClick = LoadClick("2.wav");
@@ -93,7 +103,11 @@ namespace piano
         public Arranger Arranger { get; }
         public Sequencer Sequencer { get; }
         public SoundFont SoundFont => live.SoundFont;
-        public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 2);
+        public WaveFormat WaveFormat { get; }
+
+        // Everything is rendered at this rate. It is the one the sound card runs at when that is
+        // known, so that Windows has nothing to convert on the way out.
+        public int SampleRate { get; }
 
         // Song position in ticks, negative during the count-in
         public int Position => position;
@@ -313,6 +327,7 @@ namespace piano
             int frames = count / 2;
             if (buffers[0].Length < frames) buffers = NewBuffers(frames);
             float[] left = buffers[0], right = buffers[1], songLeft = buffers[2], songRight = buffers[3], clickLeft = buffers[4], clickRight = buffers[5];
+            float[] accompLeft = buffers[6], accompRight = buffers[7];
 
             RunInbox();
 
@@ -332,8 +347,10 @@ namespace piano
 
                 live.Render(left.AsSpan(done, n), right.AsSpan(done, n));
 
-                if (Sequencer.Active || songSynth.ActiveVoiceCount > 0) songSynth.Render(songLeft.AsSpan(done, n), songRight.AsSpan(done, n));
-                else { songLeft.AsSpan(done, n).Clear(); songRight.AsSpan(done, n).Clear(); }
+                // rendered even with no song playing: paused, it would keep the end of its reverb
+                // and let it out at the start of the next song
+                songSynth.Render(songLeft.AsSpan(done, n), songRight.AsSpan(done, n));
+                accompSynth.Render(accompLeft.AsSpan(done, n), accompRight.AsSpan(done, n));
 
                 RenderClick(clickLeft.AsSpan(done, n), clickRight.AsSpan(done, n));
 
@@ -343,8 +360,8 @@ namespace piano
 
             for (int i = 0, o = offset; i < frames; i++)
             {
-                buffer[o++] = left[i] + songLeft[i];
-                buffer[o++] = right[i] + songRight[i];
+                buffer[o++] = left[i] + songLeft[i] + accompLeft[i];
+                buffer[o++] = right[i] + songRight[i] + accompRight[i];
             }
 
             if (recorder != null)
@@ -365,7 +382,7 @@ namespace piano
 
         private static float[][] NewBuffers(int frames)
         {
-            var result = new float[6][];
+            var result = new float[8][];
             for (int i = 0; i < result.Length; i++) result[i] = new float[frames];
             return result;
         }
@@ -420,7 +437,7 @@ namespace piano
         }
 
         // Optional custom metronome sounds next to the executable, converted to the engine format
-        private static float[]? LoadClick(string fileName)
+        private float[]? LoadClick(string fileName)
         {
             try
             {

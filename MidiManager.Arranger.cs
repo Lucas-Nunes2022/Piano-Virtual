@@ -337,7 +337,8 @@ namespace piano
             ("Eighth notes (1/8)", "Colcheias (1/8)", 240),
             ("Sixteenth notes (1/16)", "Semicolcheias (1/16)", 120),
             ("Eighth-note triplets (swing)", "Tercinas de colcheia (suingue)", 160),
-            ("Sixteenth-note triplets", "Tercinas de semicolcheia", 80)
+            ("Sixteenth-note triplets", "Tercinas de semicolcheia", 80),
+            ("Thirty-second notes (1/32)", "Fusas (1/32)", 60)
         };
 
         private static (int Track, SongEvent[] Events)? quantizeUndo;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using NAudio.CoreAudioApi;
 using NAudio.Midi;
 using NAudio.Wave;
 using Speech;
@@ -62,11 +63,14 @@ namespace piano
                     return;
                 }
 
-                engine = new AudioEngine(soundFontPath);
+                engine = new AudioEngine(soundFontPath, OutputSampleRate());
                 Instruments.LoadFromSoundFont(engine.SoundFont);
 
+                // three buffers instead of the usual two: the latency is the same, but more sound
+                // is still waiting in line when one of them is filled late
                 waveOut = new WaveOutEvent();
                 waveOut.DesiredLatency = 50;
+                waveOut.NumberOfBuffers = 3;
                 waveOut.Init(engine);
                 waveOut.Play();
 
@@ -87,6 +91,26 @@ namespace piano
                 MessageBox.Show(L.T("Error starting audio: ", "Erro ao iniciar áudio: ") + ex.Message);
                 Instruments.LoadDefault();
             }
+        }
+
+        // The rate the default sound card runs at (Windows sound settings, default format).
+        // Playing at any other rate makes Windows convert the sound, which crackles on some
+        // cards and formats. Above 96000 Hz, half or a quarter of the rate converts just as cleanly.
+        private static int OutputSampleRate()
+        {
+            try
+            {
+                using var devices = new MMDeviceEnumerator();
+                using var device = devices.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                using var client = device.AudioClient;
+
+                int rate = client.MixFormat.SampleRate;
+                while (rate > 96000) rate /= 2;
+                if (rate >= 32000) return rate;
+            }
+            catch { }
+
+            return AudioEngine.DefaultSampleRate;
         }
 
         public static void Shutdown()

@@ -14,13 +14,18 @@ namespace piano
         {
             Suffix = suffix;
             Intervals = intervals;
-            foreach (int interval in intervals) Mask |= 1 << interval;
+            // a ninth is written as 14, but any key with that name counts when the chord is played
+            foreach (int interval in intervals) Mask |= 1 << (interval % 12);
         }
+
+        // The seventh, or the sixth of a sixth chord; 0 when the chord has neither
+        public int Seventh => Intervals.FirstOrDefault(i => i >= 9 && i <= 11);
+        public bool HasNinth => Intervals.Contains(14);
 
         // Intervals the bass line walks through
         public int Third => Intervals.Length > 2 ? Intervals[1] : Intervals[^1];
         public int Fifth => Intervals.FirstOrDefault(i => i >= 6 && i <= 8, 7);
-        public int Color => Intervals[^1] >= 9 ? Intervals[^1] : Intervals.Contains(4) ? 9 : Intervals.Contains(3) ? 10 : 12;
+        public int Color => Seventh > 0 ? Seventh : Intervals.Contains(4) ? 9 : Intervals.Contains(3) ? 10 : 12;
     }
 
     public sealed record Chord(int Root, ChordType Type)
@@ -30,6 +35,7 @@ namespace piano
         public string Name => NoteNames[Root] + Type.Suffix;
 
         public static string NoteName(int note) => NoteNames[note % 12] + (note / 12 - 1);
+        public static string PitchName(int pitch) => NoteNames[pitch % 12];
     }
 
     public static class ChordDetector
@@ -44,8 +50,12 @@ namespace piano
             new("dim", 0, 3, 6), new("m7b5", 0, 3, 6, 10), new("dim7", 0, 3, 6, 9), new("aug", 0, 4, 8),
             new("sus4", 0, 5, 7), new("sus2", 0, 2, 7), new("7sus4", 0, 5, 7, 10), new("6", 0, 4, 7, 9), new("m6", 0, 3, 7, 9),
             new("mMaj7", 0, 3, 7, 11),
-            // sevenths played without the fifth
+            // ninths, over a seventh chord or added to a plain one
+            new("9", 0, 4, 7, 10, 14), new("m9", 0, 3, 7, 10, 14), new("maj9", 0, 4, 7, 11, 14),
+            new("add9", 0, 4, 7, 14), new("madd9", 0, 3, 7, 14),
+            // sevenths and ninths played without the fifth
             new("7", 0, 4, 10), new("m7", 0, 3, 10), new("maj7", 0, 4, 11),
+            new("9", 0, 4, 10, 14), new("m9", 0, 3, 10, 14), new("maj9", 0, 4, 11, 14),
             // two fingers
             new("", 0, 4), new("m", 0, 3), new("5", 0, 7), new("7", 0, 10)
         };
@@ -75,7 +85,7 @@ namespace piano
             if (inversion != null) return inversion;
 
             // Nothing matches exactly: take the largest chord contained in the notes and ignore the
-            // extra ones (ninths and other tensions).
+            // extra ones (elevenths and other tensions).
             Chord? best = null;
             int bestScore = 0;
             for (int t = 0; t < Types.Length; t++)
@@ -108,8 +118,12 @@ namespace piano
         private enum Section { Intro, Main, Fill, Ending, Final }
 
         private readonly AudioEngine engine;
-        private readonly List<int> drumsOn = new();
+        private readonly List<(int Note, int OffStep)> drumsOn = new();
         private readonly List<int>[] sounding = new List<int>[Styles.MaxParts];
+        // Note lines that are playing: where each one sounds in the current chord (-1 while there
+        // is no chord yet) and how hard it was struck. Added marks the ninth a line brings along
+        // besides its own note (-1 while the chord has none).
+        private readonly List<(int Line, int Note, int Velocity, bool Added)>[] lineNotes = new List<(int, int, int, bool)>[Styles.MaxParts];
         private readonly char[] current = new char[Styles.MaxParts];
         private readonly int[] voicing = new int[8];
 
@@ -135,7 +149,11 @@ namespace piano
         public Arranger(AudioEngine engine)
         {
             this.engine = engine;
-            for (int i = 0; i < sounding.Length; i++) sounding[i] = new List<int>();
+            for (int i = 0; i < sounding.Length; i++)
+            {
+                sounding[i] = new List<int>();
+                lineNotes[i] = new List<(int, int, int, bool)>();
+            }
         }
 
         public int BeatsPerBar => style.BeatsPerBar;
@@ -143,6 +161,10 @@ namespace piano
 
         private int TicksPerStep => AudioEngine.TicksPerBeat / style.StepsPerBeat;
         private int StepsPerBar => style.BeatsPerBar * style.StepsPerBeat;
+
+        // A drum is let go about a sixteenth note after it is hit. On a finer grid one step would
+        // be too soon and could cut its sound short.
+        private int DrumSteps => (style.StepsPerBeat + 3) / 4;
 
         public void Start(bool withIntro) => engine.Post(() => DoStart(withIntro));
         public void Stop() => engine.Post(StopNow);
@@ -264,6 +286,7 @@ namespace piano
 
             for (int i = 0; i < style.Parts.Length; i++)
             {
+                MoveLines(i);
                 if (current[i] == '.') continue;
                 Release(i);
                 Trigger(i);
@@ -293,7 +316,7 @@ namespace piano
 
             lastStep = step;
             int barStep = step % StepsPerBar;
-            ReleaseDrums();
+            ReleaseDrums(step);
 
             if (barStep == 0)
             {
@@ -303,7 +326,13 @@ namespace piano
 
                 if (endRequested) { section = Section.Ending; endRequested = false; }
                 else if (fillQueued) { section = Section.Fill; fillQueued = false; }
-                else if (pendingVariation >= 0 && section == Section.Main) { Variation = pendingVariation; pendingVariation = -1; }
+                else if (pendingVariation >= 0 && section == Section.Main)
+                {
+                    // the other variation has note lines of its own
+                    for (int i = 0; i < lineNotes.Length; i++) ReleaseLines(i);
+                    Variation = pendingVariation;
+                    pendingVariation = -1;
+                }
 
                 if (section != Section.Intro) bar++;
             }
@@ -327,6 +356,16 @@ namespace piano
 
             for (int i = 0; i < style.Parts.Length; i++)
             {
+                var notes = Lines(i);
+                for (int line = 0; line < notes.Length; line++)
+                {
+                    char hit = notes[line].Pattern[position % notes[line].Pattern.Length];
+                    if (hit == '-') continue;
+
+                    ReleaseLine(i, line);
+                    if (hit != '.') SoundLine(i, line, hit);
+                }
+
                 string pattern = Variation == 1 ? style.Parts[i].B : style.Parts[i].A;
                 char c = pattern.Length == 0 ? '.' : pattern[position % pattern.Length];
                 if (c == '-') continue;
@@ -347,6 +386,7 @@ namespace piano
             for (int i = 0; i < style.Parts.Length; i++)
             {
                 Release(i);
+                ReleaseLines(i);
                 current[i] = style.Parts[i].Role == PartRole.Bass ? '1' : 'x';
                 Trigger(i);
             }
@@ -354,14 +394,28 @@ namespace piano
 
         private void Drum(int note, int velocity)
         {
+            // hit again before being let go: the note-off of the first hit must not end the second
+            for (int i = 0; i < drumsOn.Count; i++)
+            {
+                if (drumsOn[i].Note != note) continue;
+                engine.AccompOut(DrumChannel, 0x80, note, 0);
+                drumsOn.RemoveAt(i);
+                break;
+            }
+
             engine.AccompOut(DrumChannel, 0x90, note, velocity);
-            drumsOn.Add(note);
+            drumsOn.Add((note, lastStep + DrumSteps));
         }
 
-        private void ReleaseDrums()
+        // Lets go of the drums due by this step; of all of them when no step is given
+        private void ReleaseDrums(int step = int.MaxValue)
         {
-            foreach (int note in drumsOn) engine.AccompOut(DrumChannel, 0x80, note, 0);
-            drumsOn.Clear();
+            for (int i = drumsOn.Count - 1; i >= 0; i--)
+            {
+                if (drumsOn[i].OffStep > step) continue;
+                engine.AccompOut(DrumChannel, 0x80, drumsOn[i].Note, 0);
+                drumsOn.RemoveAt(i);
+            }
         }
 
         private void Trigger(int index)
@@ -413,9 +467,128 @@ namespace piano
             sounding[index].Clear();
         }
 
+        private NoteLine[] Lines(int index) => Variation == 1 ? style.Parts[index].NotesB : style.Parts[index].NotesA;
+
+        // Where a note written over C major sounds in the current chord. Only its timing was
+        // touched when it was recorded, so it stays as close to what was played as the chord
+        // allows: the third, the fifth and the seventh follow the type of the chord, and the
+        // whole part goes up to the root (as far as the one in "up") or down to it (after that).
+        //
+        // The chords and the pad also get the seventh and the ninth nobody recorded, through
+        // their tension line: it plays the seventh, just below, instead of the root, and its
+        // added note is the ninth, just above. Returns -1 when there is no ninth to add.
+        private int InChord(int index, int line, bool added)
+        {
+            var part = style.Parts[index];
+            var type = chord!.Type;
+            int note = Lines(index)[line].Note;
+            int interval = note % 12;
+            int adapted;
+
+            if (added)
+            {
+                if (!type.HasNinth || Plays(index, 2)) return -1;
+                adapted = 2;
+            }
+            else if (line == TensionLine(index) && type.Seventh > 0 && !Plays(index, type.Seventh)) adapted = type.Seventh - 12;
+            else adapted = Adapted(interval);
+
+            int shift = chord.Root <= part.Up ? chord.Root : chord.Root - 12;
+            return Math.Clamp(note - interval + adapted + shift, 0, 127);
+        }
+
+        private int Adapted(int interval) => interval switch
+        {
+            4 => chord!.Type.Third,
+            7 => chord!.Type.Fifth,
+            10 or 11 when chord!.Type.Seventh > 0 => chord.Type.Seventh,
+            _ => interval
+        };
+
+        // Whether some line of the part already lands on that interval of the chord
+        private bool Plays(int index, int interval)
+        {
+            foreach (var line in Lines(index))
+                if (Adapted(line.Note % 12) == interval) return true;
+            return false;
+        }
+
+        // The line that takes the tensions: the highest root the part has. A lower one keeps
+        // playing the root. -1 for the bass, for a part with tensions off or with no root.
+        private int TensionLine(int index)
+        {
+            var part = style.Parts[index];
+            if (part.Role == PartRole.Bass || !part.Tensions) return -1;
+
+            var lines = Lines(index);
+            int top = -1;
+            for (int i = 0; i < lines.Length; i++)
+                if (lines[i].Note % 12 == 0 && (top < 0 || lines[i].Note > lines[top].Note)) top = i;
+            return top;
+        }
+
+        private void SoundLine(int index, int line, char hit)
+        {
+            var part = style.Parts[index];
+            int velocity = hit switch
+            {
+                'X' => Math.Min(127, part.Velocity + 20),
+                'o' => Math.Max(1, part.Velocity * 6 / 10),
+                _ => part.Velocity
+            };
+
+            Hold(index, line, velocity, false);
+            if (line == TensionLine(index)) Hold(index, line, velocity, true);
+        }
+
+        private void Hold(int index, int line, int velocity, bool added)
+        {
+            int note = chord == null ? -1 : InChord(index, line, added);
+            if (note >= 0) engine.AccompOut(FirstPartChannel + index, 0x90, note, velocity);
+            lineNotes[index].Add((line, note, velocity, added));
+        }
+
+        private void ReleaseLine(int index, int line)
+        {
+            var held = lineNotes[index];
+            for (int i = held.Count - 1; i >= 0; i--)
+            {
+                if (held[i].Line != line) continue;
+                if (held[i].Note >= 0) engine.AccompOut(FirstPartChannel + index, 0x80, held[i].Note, 0);
+                held.RemoveAt(i);
+            }
+        }
+
+        private void ReleaseLines(int index)
+        {
+            foreach (var (_, note, _, _) in lineNotes[index])
+                if (note >= 0) engine.AccompOut(FirstPartChannel + index, 0x80, note, 0);
+            lineNotes[index].Clear();
+        }
+
+        // The chord changed: the notes that are sounding go to their place in the new one
+        private void MoveLines(int index)
+        {
+            var held = lineNotes[index];
+            for (int i = 0; i < held.Count; i++)
+            {
+                var (line, note, velocity, added) = held[i];
+                int moved = InChord(index, line, added);
+                if (moved == note) continue;
+
+                if (note >= 0) engine.AccompOut(FirstPartChannel + index, 0x80, note, 0);
+                if (moved >= 0) engine.AccompOut(FirstPartChannel + index, 0x90, moved, velocity);
+                held[i] = (line, moved, velocity, added);
+            }
+        }
+
         private void ReleaseAll()
         {
-            for (int i = 0; i < sounding.Length; i++) Release(i);
+            for (int i = 0; i < sounding.Length; i++)
+            {
+                Release(i);
+                ReleaseLines(i);
+            }
             ReleaseDrums();
         }
     }

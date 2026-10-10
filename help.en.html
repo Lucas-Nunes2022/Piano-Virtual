@@ -47,11 +47,11 @@
 
     <h2>Instruments and Layers (Dual Voice)</h2>
     <ul>
-        <li><span class="key">◄ / ► arrows</span> : <strong>Change the Main Instrument</strong></li>
-        <li><span class="key">▲ / ▼ arrows</span> : <strong>Change Octave</strong></li>
-        <li><span class="key">Shift</span> + <span class="key">▲ / ▼ arrows</span> : <strong>Change Note Velocity</strong></li>
+        <li><span class="key">Left / Right arrows</span> : <strong>Change the Main Instrument</strong></li>
+        <li><span class="key">Up / Down arrows</span> : <strong>Change Octave</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">Up / Down arrows</span> : <strong>Change Note Velocity</strong></li>
         <li><span class="key">F10</span> : <strong>Turn the Second Layer On/Off</strong></li>
-        <li><span class="key">Shift</span> + <span class="key">◄ / ► arrows</span> : <strong>Change the Layer Instrument</strong></li>
+        <li><span class="key">Shift</span> + <span class="key">Left / Right arrows</span> : <strong>Change the Layer Instrument</strong></li>
     </ul>
 
     <h2>Audio Controls</h2>
@@ -79,34 +79,41 @@
         <li><span class="key">Shift</span> + <span class="key">F11</span> : <strong>Start with an intro</strong>, or finish with an <strong>ending</strong> if it is already playing</li>
         <li><span class="key">F12</span> : <strong>Fill-in</strong></li>
         <li><span class="key">Shift</span> + <span class="key">F12</span> : <strong>Switch variation A/B</strong> (with a fill-in)</li>
-        <li><span class="key">Ctrl</span> + <span class="key">◄ / ► arrows</span> : <strong>Change style</strong> (while playing, it changes on the next bar)</li>
-        <li><span class="key">Ctrl</span> + <span class="key">▲ / ▼ arrows</span> : <strong>Tempo</strong> in steps of 5 (with <span class="key">Shift</span>, steps of 1)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Left / Right arrows</span> : <strong>Change style</strong> (while playing, it changes on the next bar)</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Up / Down arrows</span> : <strong>Tempo</strong> in steps of 5 (with <span class="key">Shift</span>, steps of 1)</li>
         <li><span class="key">Ctrl</span> + <span class="key">PageUp</span> / <span class="key">PageDown</span> : <strong>Accompaniment volume</strong></li>
-        <li><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">◄ / ► arrows</span> : <strong>Split point</strong></li>
+        <li><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Left / Right arrows</span> : <strong>Split point</strong></li>
     </ul>
-    <p><strong>Chords:</strong> a single key plays the major chord; <span class="key">Shift</span> + the key plays the <strong>minor</strong> chord; root plus minor third plays the minor chord; root plus seventh plays the seventh chord. With three or more keys the program recognizes major, minor, seventh, diminished, augmented, sus and sixth chords, in any inversion.</p>
+    <p><strong>Chords:</strong> a single key plays the major chord; <span class="key">Shift</span> + the key plays the <strong>minor</strong> chord; root plus minor third plays the minor chord; root plus seventh plays the seventh chord. With three or more keys the program recognizes major, minor, seventh, ninth, diminished, augmented, sus and sixth chords, in any inversion. The ninth is the note a whole step above the root: C, E, G, B flat and D make C9, and C, D, E and G make Cadd9 (added ninth, no seventh). It also works for minor chords (Cm9) and with a major seventh (Cmaj9); in ninth chords with a seventh the fifth may be left out.</p>
 
     <h2>Record a Style by Playing</h2>
     <p>In the Arranger menu choose <strong>Record a New Style by Playing</strong> (starts from nothing) or <strong>Re-record Parts of the Current Style</strong> (starts from an existing style). You record one part at a time, always playing in <strong>C major</strong>; afterwards the arranger moves everything to whatever chord you play.</p>
     <p>The parts are: Drums, Bass, Chords and Pad of variation A, the same four of variation B, and the Fill-in. Whatever is left empty in variation B and in the fill-in uses variation A.</p>
     <ul>
         <li><span class="key">Ctrl</span> + <span class="key">T</span> : <strong>Next part</strong> (with <span class="key">Shift</span>, the previous one)</li>
-        <li><span class="key">Ctrl</span> + <span class="key">R</span> : <strong>Record</strong>. There is a one-bar count-in; play, then press it again to stop. It records up to 4 bars.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">R</span> : <strong>Record</strong>. There is a one-bar count-in; play, then press it again to stop. It records up to 4 bars; the fill-in, only 1.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Q</span> : <strong>Quantize</strong>: changes the figure your playing is snapped to: quarter notes, eighth notes, sixteenth notes, eighth-note triplets (swing), sixteenth-note triplets or thirty-second notes (with <span class="key">Shift</span>, the previous one). It applies to the next recordings, so you can record the kick in sixteenth notes and the hi-hat in triplets.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Left / Right arrows</span> : <strong>How far up the chords the part goes</strong>. The selected bass, chords or pad goes up from where it was played in C as far as this chord, and goes down on the chords after it. At first it is F sharp (F#): up as far as F#, down from G on. It applies to both variations.</li>
+        <li><span class="key">Ctrl</span> + <span class="key">N</span> : <strong>Seventh and ninth</strong>: turns on or off, for the selected chords or pad, the seventh and the ninth the arranger adds by itself. It starts on. It applies to both variations.</li>
         <li><span class="key">Ctrl</span> + <span class="key">P</span> or <span class="key">F11</span> : <strong>Listen</strong> to the style as it is</li>
         <li><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">P</span> : <strong>Listen to the selected part only</strong> (just the bass, for instance)</li>
         <li><span class="key">Ctrl</span> + <span class="key">L</span> : <strong>Listen to the last recording only</strong>: just what you have just recorded (the snare, for instance), without what was already there</li>
         <li><span class="key">Ctrl</span> + <span class="key">Z</span> : <strong>Undo the last recording</strong>. Got the snare wrong? Only that take goes away; the hi-hat and cymbal recorded before it stay. Press it again to go back one more recording.</li>
-        <li><span class="key">Ctrl</span> + <span class="key">Delete</span> : <strong>Erase</strong> the selected part</li>
-        <li><span class="key">Ctrl</span> + <span class="key">▲ / ▼ arrows</span> : <strong>Tempo</strong> of the style</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Delete</span> : <strong>Erase</strong> the selected part, with all its instruments</li>
+        <li><span class="key">Ctrl</span> + <span class="key">Up / Down arrows</span> : <strong>Tempo</strong> of the style</li>
         <li><span class="key">Ctrl</span> + <span class="key">S</span> : <strong>Save</strong> the style and leave</li>
         <li><span class="key">Esc</span> : <strong>Leave without saving</strong></li>
     </ul>
-    <p>While the recorder is open, the <strong>Style Recorder</strong> menu has the same commands, plus <strong>Erase Everything and Start Over</strong>.</p>
+    <p>While the recorder is open, the <strong>Style Recorder</strong> menu has the same commands, plus <strong>Erase Everything and Start Over</strong>. Under <strong>Quantize Recordings to</strong> you pick the figure straight from the list.</p>
     <ul>
         <li><strong>Drums and Fill-in:</strong> the keys become the drum kit: <span class="key">Z</span> kick, <span class="key">S</span> rim, <span class="key">X</span> snare, <span class="key">D</span> clap, <span class="key">G</span> closed hi-hat, <span class="key">H</span> pedal hi-hat, <span class="key">J</span> open hi-hat, <span class="key">V</span> <span class="key">B</span> <span class="key">N</span> <span class="key">M</span> <span class="key">,</span> <span class="key">.</span> toms, <span class="key">L</span> crash, <span class="key">;</span> ride. Every recording <u>adds</u> pieces to what is already there, so you can record kick and snare first and the hi-hat afterwards.</li>
-        <li><strong>Bass:</strong> play one note at a time. C is the root, E the third, G the fifth, A or B flat the seventh/sixth, and the upper C the octave.</li>
-        <li><strong>Chords and Pad:</strong> two or more keys together count as the whole chord. A single key becomes an arpeggio: C, E and G are the first, second and third notes of the chord.</li>
-        <li>The instrument of the part is the one selected when you record it, and what you play is snapped to the time grid of the style.</li>
+        <li><strong>Fill-in:</strong> it is one bar long, so its recording stops by itself at the end of the bar. While you record the fill-in, only the fill-in plays: the metronome and the pieces already in it, without the bass, the chords, the pad and the drums of variation A.</li>
+        <li><strong>Bass, Chords and Pad:</strong> what you play is recorded as you played it: the notes, their octave, how long each one lasts and every repeated hit. Recording only changes the timing, by snapping the notes to the quantize figure in use.</li>
+        <li><strong>Several instruments in the same part:</strong> on bass, chords and pad every recording <u>adds</u> too, and the instrument is the one selected when you record. If the part does not have that instrument yet, it comes in beside the ones already there: the Chords can be an electric piano, a guitar and an organ. If the part already has that instrument, the new notes join its notes. A style holds up to 6 instruments in all, not counting the drums. As you go through the parts with <span class="key">Ctrl</span> + <span class="key">T</span>, the program says the instruments of each one. To redo something, undo with <span class="key">Ctrl</span> + <span class="key">Z</span>, or erase the part with <span class="key">Ctrl</span> + <span class="key">Delete</span> and record it again.</li>
+        <li>In variation B, an instrument with nothing recorded there yet starts from nothing: while you record, what it plays in variation A is silent, and the other instruments play as usual.</li>
+        <li>Afterwards the arranger moves those notes to the chord you play: the third, the fifth and the seventh follow the type of the chord (E becomes E flat on a minor chord) and the other notes just move along with the root. The part goes up to the new root (as far as F sharp) or down to it (from G on), to stay close to where it was played; that limit is changed with <span class="key">Ctrl</span> + <span class="key">Left / Right arrows</span>. Inside the recorder everything is heard in C, so the difference only shows after saving, on other chords.</li>
+        <li><strong>Seventh and ninth:</strong> in the chords and the pad, when you play a chord with a seventh and the recording has no seventh, the highest C of the part plays the seventh instead: on C7, E, G and C become E, G and B flat. On a ninth chord the ninth comes in just above it, in the same rhythm: on C9, E, G, B flat and D. The bass stays on the root, and what was recorded with a seventh or a ninth is left as it is. To have the part play only what was recorded, turn this off with <span class="key">Ctrl</span> + <span class="key">N</span>.</li>
+        <li>What you play is snapped to the quantize figure in use (at first, the one of the style).</li>
     </ul>
 
     <h2>Edit Styles as Text</h2>
@@ -126,6 +133,13 @@ a = 1--- --1. ..1- 5-3.</pre>
         <li><strong>Chords:</strong> <span class="key">x</span> whole chord, <span class="key">1</span> to <span class="key">4</span> single notes (arpeggio)</li>
         <li><span class="key">-</span> keeps the previous note sounding</li>
     </ul>
+    <p>What you record by playing is saved in another way, with one line for each note, as it sounds over a C major chord (middle C is C4). You can write it like that too:</p>
+    <pre>[bass]
+program = 33
+a C2 = x--x .... .... x---
+a G1 = .... x-.x .... ....
+a C3 = .... .... x--. ....</pre>
+    <p>In these lines, <span class="key">x</span> is the note, <span class="key">X</span> an accented note, <span class="key">o</span> a soft note and <span class="key">-</span> keeps the note sounding. For variation B, start the line with <span class="key">b</span> instead of <span class="key">a</span>. The line <span class="key">up = F#</span> says how far up the chords those notes go; it can be any note from C to B. In [chord] and [pad], the line <span class="key">tensions = off</span> makes the part play only what is written, without the seventh and the ninth the arranger adds. A part with more than one instrument has a section for each: [chord], [chord 2], [chord 3]. A style can have up to six instrument sections.</p>
 
     <h2>Song (Track Recording)</h2>
     <p>Record up to 6 tracks, one at a time, each with its own instrument. While you record a track, the others play. If the arranger is on during the recording, the accompaniment is recorded too, on a track of its own.</p>
