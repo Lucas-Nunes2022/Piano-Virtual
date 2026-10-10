@@ -3,6 +3,22 @@
 Each version is described in English and then in Portuguese. The section of a version becomes
 the text of its GitHub release.
 
+## 1.6.2
+
+### English
+
+- **New Arrocha style.** The factory Arrocha now follows keyboard seresta: kick on beats 1, 3
+  and 4, hi-hat in eighth notes and a bass that walks through root, third and fifth.
+  Variation B brings a rim shot on beat 2, the guitar on every offbeat and a bass that repeats
+  the root before going to the fifth. It has a fill-in of its own.
+
+### Português
+
+- **Arrocha novo.** O Arrocha de fábrica agora segue a seresta de teclado: bumbo nos tempos 1,
+  3 e 4, chimbal em colcheias e um baixo que passa por tônica, terça e quinta. A variação B
+  traz aro no tempo 2, violão em todos os contratempos e um baixo que repete a tônica antes
+  de ir para a quinta. Tem virada própria.
+
 ## 1.6.1
 
 ### English
