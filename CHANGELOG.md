@@ -3,6 +3,26 @@
 Each version is described in English and then in Portuguese. The section of a version becomes
 the text of its GitHub release.
 
+## 1.6.5
+
+### English
+
+- **Quantize leaves the end of the note alone.** In the style recorder, quantizing now moves
+  only where each note starts; the note keeps the length it was played with. Before, every
+  note was stretched to at least one step of the grid, so short, choked strums came out long.
+  Styles recorded with bass, chords or pad are saved with a finer grid to keep those lengths.
+- **Forró with a choked guitar.** The guitar of the factory Forró now plays short strums, a
+  third of a sixteenth each, as in forró. The rhythm, the drums and the bass are unchanged.
+
+### Português
+
+- **A quantização não mexe no fim da nota.** No gravador de estilos, quantizar agora só muda
+  onde cada nota começa; a nota mantém a duração que foi tocada. Antes, toda nota era esticada
+  para pelo menos um passo da grade, e as batidas curtas e abafadas ficavam compridas. Estilos
+  com baixo, acordes ou pad gravados são salvos numa grade mais fina para guardar essas durações.
+- **Forró com guitarra repicada.** A guitarra do Forró de fábrica agora bate curto, um terço de
+  semicolcheia em cada batida, como no forró. O ritmo, a bateria e o baixo continuam iguais.
+
 ## 1.6.4
 
 ### English

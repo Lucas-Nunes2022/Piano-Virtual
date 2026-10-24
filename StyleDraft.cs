@@ -7,8 +7,8 @@ namespace piano
 {
     // A style being created by playing. It is made of nine parts ("slots"): drums, bass, chord and
     // pad for variation A, the same four for variation B, and the fill-in. A recording only has
-    // its timing changed, by being snapped to the quantize grid: the notes, their octave and how
-    // long each one lasts are kept as played, in the same pattern text a .style file uses.
+    // the start of each note snapped to the quantize grid: the notes, their octave and how long
+    // each one lasts are kept as played, in the same pattern text a .style file uses.
     //
     // Recordings add up. On the drums, each one layers more pieces. On bass, chords and pad, each
     // one adds notes to the instrument it was played with, or brings that instrument into the
@@ -337,8 +337,11 @@ namespace piano
         public int Apply(int slot, CapturedNote[] notes, int endTick, int program)
         {
             int maxBars = MaxBarsOf(slot), limit = maxBars * StepsPerBar;
+            // only the start goes to the grid: the note keeps the length it was played with, so a
+            // short strum stays short instead of lasting a whole step of the grid
             var hits = notes
-                .Select(n => (Step: Snap(n.Start), End: Snap(n.End), n.Note, n.Velocity))
+                .Select(n => (Step: Snap(n.Start), Length: Math.Max(1, (int)Math.Round((n.End - n.Start) / (double)TicksPerStep)), n.Note, n.Velocity))
+                .Select(h => (h.Step, End: h.Step + h.Length, h.Note, h.Velocity))
                 .Where(h => h.Step < limit)
                 .OrderBy(h => h.Step)
                 .ToList();
@@ -382,7 +385,6 @@ namespace piano
 
             // an instrument is kept as it was played over C: one line per pitch, each note with its length
             var part = parts[PartOf(slot)];
-            int shortest = resolution / Quantize;
             var lines = new SortedDictionary<int, char[]>();
 
             foreach (var hit in hits)
@@ -394,8 +396,8 @@ namespace piano
                     lines[hit.Note] = line;
                 }
 
-                // a note lasts at least one step of the quantize grid, and ends the one before it
-                int end = Math.Min(length, Math.Max(hit.Step + shortest, hit.End));
+                // a note ends the one before it on the same pitch
+                int end = Math.Min(length, hit.End);
                 line[hit.Step] = hit.Velocity >= 110 ? 'X' : hit.Velocity <= 60 ? 'o' : 'x';
                 for (int i = hit.Step + 1; i < length; i++) line[i] = i < end ? '-' : '.';
             }
