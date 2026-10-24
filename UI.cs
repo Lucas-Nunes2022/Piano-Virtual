@@ -417,6 +417,14 @@ namespace piano
                             Wf.Set("lbl_path", _tempRecPath);
                         }
                     });
+
+                    Wf.hStack(() => {
+                        Wf.label(L.T("File format:", "Formato do arquivo:"));
+                        Wf.combo(new[] { L.T("WAV (full quality, large file)", "WAV (qualidade total, arquivo grande)"),
+                                         L.T("MP3 (small file)", "MP3 (arquivo pequeno)") }, "cb_recfmt", cb => {
+                            cb.SelectedIndex = Config.RecordingFormat == "mp3" ? 1 : 0;
+                        });
+                    });
                 });
 
                 Wf.group(L.T("Language", "Idioma"), () =>
@@ -465,7 +473,7 @@ namespace piano
         {
             if (MidiManager.IsRecording())
             {
-                StopRecordingUI();
+                await StopRecordingUI();
             }
             else
             {
@@ -477,7 +485,8 @@ namespace piano
         private static async Task<bool> StartRecordingUI()
         {
             string savedPath = Config.RecordingPath;
-            string fileName = $"Piano_Rec_{DateTime.Now:yyyyMMdd_HHmmss}.wav";
+            string extension = Config.RecordingFormat == "mp3" ? ".mp3" : ".wav";
+            string fileName = $"Piano_Rec_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
             string fullPath;
 
             if (!string.IsNullOrWhiteSpace(savedPath) && Directory.Exists(savedPath))
@@ -487,7 +496,8 @@ namespace piano
             else
             {
                 using var sfd = new SaveFileDialog();
-                sfd.Filter = L.T("WAV Audio File|*.wav", "Arquivo de Áudio WAV|*.wav");
+                sfd.Filter = L.T("WAV Audio File|*.wav|MP3 Audio File|*.mp3", "Arquivo de Áudio WAV|*.wav|Arquivo de Áudio MP3|*.mp3");
+                sfd.FilterIndex = extension == ".mp3" ? 2 : 1;
                 sfd.FileName = fileName;
                 sfd.InitialDirectory = Config.GetRecordingPath();
 
@@ -497,7 +507,9 @@ namespace piano
 
                 if (!string.IsNullOrEmpty(folder))
                 {
+                    // the next recordings go to the same folder, in the format chosen here
                     Config.RecordingPath = folder;
+                    Config.RecordingFormat = Mp3.IsMp3(sfd.FileName) ? "mp3" : "wav";
                     Config.Save();
                 }
 
@@ -521,13 +533,24 @@ namespace piano
             return true;
         }
 
-        private static void StopRecordingUI()
+        private static async Task StopRecordingUI()
         {
             if (!MidiManager.IsRecording()) return;
 
-            MidiManager.StopRecording();
+            string requested = MidiManager.RecordingFile;
+            var finishing = MidiManager.FinishRecording();
+            if (!finishing.IsCompleted)
+            {
+                UpdateStatus(L.T("CONVERTING TO MP3...", "CONVERTENDO PARA MP3..."));
+                Sp.Speak(L.T("Converting to MP3", "Convertendo para MP3"));
+            }
+
+            string saved = await finishing;
             UpdateStatus("");
-            Wf.msg(L.T("Recording saved successfully!", "Gravação salva com sucesso!"));
+
+            if (saved == requested) Wf.msg(L.T("Recording saved successfully!", "Gravação salva com sucesso!"));
+            else Wf.msg(L.T($"Windows could not create the MP3, so the recording was saved as WAV: {saved}",
+                            $"O Windows não conseguiu criar o MP3, então a gravação foi salva em WAV: {saved}"));
         }
 
         private static void CancelRecordingUI()
@@ -751,6 +774,7 @@ namespace piano
             int inIdx = ParseId(Wf.Get<string>("cb_in"));
             Config.MidiInputId = inIdx;
             Config.RecordingPath = _tempRecPath;
+            Config.RecordingFormat = Wf.Get<ComboBox>("cb_recfmt")?.SelectedIndex == 1 ? "mp3" : "wav";
 
             int language = Wf.Get<ComboBox>("cb_lang")?.SelectedIndex ?? 0;
             Config.Language = LanguageCodes[Math.Clamp(language, 0, LanguageCodes.Length - 1)];

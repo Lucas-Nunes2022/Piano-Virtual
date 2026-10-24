@@ -3,6 +3,24 @@
 Each version is described in English and then in Portuguese. The section of a version becomes
 the text of its GitHub release.
 
+## 1.6.4
+
+### English
+
+- **Performance recording in MP3.** Besides WAV, a performance can now be saved as MP3 at
+  320 kbps, about ten times smaller. Choose the format in Menu, Settings, in the Recordings
+  group, or in the file type when the program asks where to save. The MP3 is made when the
+  recording stops, with the encoder that comes with Windows. Where Windows has no MP3
+  encoder, the recording is kept as WAV and the program says where.
+
+### Português
+
+- **Gravação de performance em MP3.** Além do WAV, a performance agora pode ser salva em MP3
+  de 320 kbps, umas dez vezes menor. Escolha o formato em Menu, Configurar, no grupo
+  Gravações, ou no tipo de arquivo quando o programa perguntar onde salvar. O MP3 é feito
+  quando a gravação para, com o codificador que vem no Windows. Onde o Windows não tem esse
+  codificador, a gravação fica em WAV e o programa diz onde ela está.
+
 ## 1.6.3
 
 ### English

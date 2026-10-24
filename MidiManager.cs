@@ -19,6 +19,8 @@ namespace piano
         private static MidiIn? midiIn;
 
         private static string _currentRecPath = "";
+        private static string _recordingWav = "";
+        private static Task? _conversion;
 
         public static int BaseOctave { get; private set; } = 48;
         public static int Transpose { get; private set; } = 0;
@@ -123,6 +125,10 @@ namespace piano
             waveOut = null;
             // closes a recording in progress, otherwise its WAV header would be left unfinished
             engine?.Dispose();
+
+            // an MP3 still being made, or one whose recording was left running, is finished first
+            _conversion?.Wait();
+            if (_recordingWav.Length > 0) Mp3.Convert(_recordingWav, _currentRecPath);
         }
 
         private static void Announce(string message)
@@ -205,18 +211,38 @@ namespace piano
             Sp.Speak($"{name} {percent}");
         }
 
+        // An MP3 recording goes to a WAV in the temp folder first and is converted when it stops
         public static void StartRecording(string filename)
         {
             _currentRecPath = filename;
-            engine?.StartRecording(filename);
+            _recordingWav = Mp3.IsMp3(filename) ? Path.Combine(Path.GetTempPath(), $"PianoVirtual_{Guid.NewGuid():N}.wav") : "";
+            engine?.StartRecording(_recordingWav.Length > 0 ? _recordingWav : filename);
         }
 
         public static void StopRecording() => engine?.StopRecording();
 
+        public static string RecordingFile => _currentRecPath;
+
+        // Stops the recording and returns the file it was saved to: the MP3 asked for, or a WAV
+        // beside it when Windows cannot encode MP3
+        public static async Task<string> FinishRecording()
+        {
+            StopRecording();
+            if (_recordingWav.Length == 0) return _currentRecPath;
+
+            string wav = _recordingWav, target = _currentRecPath;
+            _recordingWav = "";
+            var conversion = Task.Run(() => Mp3.Convert(wav, target));
+            _conversion = conversion;
+            return await conversion;
+        }
+
         public static void AbortRecording()
         {
             StopRecording();
-            try { if (File.Exists(_currentRecPath)) File.Delete(_currentRecPath); } catch { }
+            string file = _recordingWav.Length > 0 ? _recordingWav : _currentRecPath;
+            _recordingWav = "";
+            try { if (File.Exists(file)) File.Delete(file); } catch { }
         }
 
         public static bool IsRecording() => engine?.IsRecording ?? false;

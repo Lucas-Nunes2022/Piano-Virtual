@@ -9,6 +9,8 @@ namespace piano
 
         public static int MidiInputId { get; set; } = 0;
         public static string RecordingPath { get; set; } = "";
+        // "wav" or "mp3"
+        public static string RecordingFormat { get; set; } = "wav";
         public static int[] Favorites { get; set; } = new int[10];
         public static string Language { get; set; } = "auto";
         public static string Style { get; set; } = "";
@@ -39,6 +41,10 @@ namespace piano
                     else if (key == "RecPath")
                     {
                         RecordingPath = value;
+                    }
+                    else if (key == "RecFormat")
+                    {
+                        RecordingFormat = value == "mp3" ? "mp3" : "wav";
                     }
                     else if (key == "Language")
                     {
@@ -76,6 +82,7 @@ namespace piano
                 using var writer = new StreamWriter(ConfigPath);
                 writer.WriteLine($"MidiInput={MidiInputId}");
                 writer.WriteLine($"RecPath={RecordingPath}");
+                writer.WriteLine($"RecFormat={RecordingFormat}");
                 writer.WriteLine($"Language={Language}");
                 writer.WriteLine($"Style={Style}");
                 writer.WriteLine($"Tempo={Tempo}");
