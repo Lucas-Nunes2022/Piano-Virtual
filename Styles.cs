@@ -696,41 +696,57 @@ low = 55
 velocity = 72
 a = .x.x ..x. .x.x ..x.
 ",
-@"name = Baiao
-name.pt = Baião
-tempo = 100
+@"name = Forro
+name.pt = Forró
+tempo = 95
 beats = 4
 steps = 4
 
 [drums]
-kick         = x..x ..x. x..x ..x.
-rim          = .... x... .... x...
-mutetriangle = xx.x xx.x xx.x xx.x
-triangle     = ..x. ..x. ..x. ..x.
+kick         = X... X... X... X...
+40           = ...X ..X. ...X ..X.
+hat          = xx.. xx.. xx.. xx..
+openhat      = ..x. ..x. ..x. ..x.
 
 [drums b]
-kick         = x..x ..x. x..x ..x.
-rim          = .... x... .... x...
-mutetriangle = xx.x xx.x xx.x xx.x
+kick         = X.x. X..x X.x. X..x
+40           = ...X ..X. ...X ..X.
+hat          = xx.. xx.. xx.. xx..
+openhat      = ..x. ..x. ..x. ..x.
+mutetriangle = xx.. xx.. xx.. xx..
 triangle     = ..x. ..x. ..x. ..x.
-shaker       = xoxo xoxo xoxo xoxo
 
 [fill]
-kick  = x..x ..x. x... ...x
-snare = x..x ..x. xxxx xx..
+kick     = X... X..x X... ...X
+40       = ...X ..X. oxxX ....
+hat      = xx.. xx.. .... ....
+openhat  = ..x. ..x. .... ....
+hightom  = .... .... .... X...
+midtom   = .... .... .... .X..
+lowtom   = .... .... .... ..X.
+floortom = .... .... .... ...X
+55       = .... .... .... ...X
 
 [bass]
 program = 33
 low = 28
-velocity = 100
-a = 1--1 --5. 1--1 --5.
-b = 1--1 --5. 1--5 --7.
+velocity = 85
+a C2 = x--. .... x--. .... | x--. .... x--. .... | x--. .... x--- .... | x--- .... x--- ....
+a E2 = .... x-.. .... x-..
+a G2 = .... ..x. .... ..x. | .... ..x. .... ..x. | .... ..x- .... ..x- | .... ..x. .... ..x.
+b C2 = X--. x-.. X--. x-..
+b G1 = .... ...x .... ...x
 
 [chord]
-program = 21
+program = 25
 low = 55
-velocity = 68
-a = x-.x -.x- x-.x -.x-
+velocity = 85
+a E4 = .xx- .xxx .xxx .xxx | .xxx .xxx .xxx .xxx | .xxx .xxx .xxx .xxx | .xxx .xx. .xxx .xxx
+a G4 = .xxx .xxx .xxx .xxx
+a C5 = .xxx .xxx .xxx .xxx
+b E4 = .xXx .xXx .xXx .xXx
+b G4 = .xXx .xXx .xXx .xXx
+b C5 = .xXx .xXx .xXx .xXx
 ",
 @"name = Arrocha
 tempo = 135

@@ -3,6 +3,24 @@
 Each version is described in English and then in Portuguese. The section of a version becomes
 the text of its GitHub release.
 
+## 1.6.3
+
+### English
+
+- **Forró replaces Baião.** The factory Baião gives way to a Forró in the line of today's
+  keyboard forró, at 95 BPM: kick on every beat, snare on the last sixteenth of beat 1 and on
+  the offbeat of beat 2, and the hi-hat playing like a triangle. Variation B brings the zabumba
+  figure to the kick, with a pickup into beat 1, adds a triangle and a bass that answers with
+  the fifth below. Its fill-in ends with toms going down and a splash cymbal.
+
+### Português
+
+- **Forró no lugar do Baião.** O Baião de fábrica dá lugar a um Forró na linha do forró de
+  teclado de hoje, a 95 BPM: bumbo em todos os tempos, caixa na última semicolcheia do tempo 1
+  e no contratempo do 2, e o chimbal tocando como um triângulo. A variação B leva a batida da
+  zabumba para o bumbo, com uma puxada para o tempo 1, e acrescenta triângulo e um baixo que
+  responde com a quinta de baixo. A virada termina com os tons descendo e um prato pequeno.
+
 ## 1.6.2
 
 ### English

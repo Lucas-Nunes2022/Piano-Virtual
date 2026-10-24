@@ -51,7 +51,9 @@ namespace piano
             Config.Save();
         }
 
-        private static Style? FindStyle(string name) => Styles.All.FirstOrDefault(s => s.Name == name);
+        // Forro took the place of the factory Baiao in 1.6.3; a config saved before keeps its style
+        private static Style? FindStyle(string name) =>
+            Styles.All.FirstOrDefault(s => s.Name == name) ?? (name == "Baiao" ? FindStyle("Forro") : null);
 
         private static void ShowStyleErrors(List<string> errors)
         {
